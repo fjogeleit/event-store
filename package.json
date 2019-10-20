@@ -1,0 +1,44 @@
+{
+  "name": "event-log",
+  "version": "1.0.0",
+  "description": "Event Store",
+  "author": "Frank Jogeleit <frank.jogeleit@web,de>",
+  "license": "MIT",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "serve": "nodemon -w ./dist example/server.js",
+    "build": "tsc -p tsconfig.json",
+    "watch": "tsc -p tsconfig.json --watch",
+    "prettier": "prettier src/**/*.ts --write && git status"
+  },
+  "devDependencies": {
+    "@types/jest": "24.0.18",
+    "@types/node": "11.13.21",
+    "@types/pg": "^7.11.2",
+    "@types/pg-format": "^1.0.0",
+    "@types/sha1": "^1.1.2",
+    "@types/uuid": "^3.4.5",
+    "fastify": "^2.10.0",
+    "fastify-postgres": "^2.0.0",
+    "jest": "24.9.0",
+    "lint-staged": "9.4.0",
+    "nodemon": "^1.19.4",
+    "prettier": "1.18.2",
+    "rxjs": "6.5.3",
+    "ts-jest": "24.1.0",
+    "typescript": "^3.6.4"
+  },
+  "lint-staged": {
+    "*.ts": [
+      "prettier --write",
+      "git add"
+    ]
+  },
+  "dependencies": {
+    "pg": "^7.12.1",
+    "pg-format": "^1.0.4",
+    "sha1": "^1.1.1",
+    "uuid": "^3.3.3"
+  }
+}
