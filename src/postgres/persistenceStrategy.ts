@@ -1,9 +1,8 @@
 import {
-  DomainEvent,
+  BaseEvent,
   ELConfig,
   FieldType,
   IEvent,
-  IEventConstructor,
   MetadataMatcher,
   MetadataOperator
 } from "../index";
@@ -16,26 +15,11 @@ export const generateTable = (streamName: string): string => {
   return `_${sha1(streamName)}`;
 };
 
-interface AggregateCollection {
-  [aggregate: string]: { [name: string]: IEventConstructor }
-}
-
 export class PostgresPersistenceStrategy {
   private readonly client: Pool;
-  private readonly eventMap: AggregateCollection;
 
   constructor(private readonly options: ELConfig) {
     this.client = options.client;
-
-    this.eventMap = this.options.aggregates.reduce<AggregateCollection>((map, config) => {
-      map[config.aggregate.name] = config.events.reduce<{ [name: string]: IEventConstructor }>((events, event) => {
-        events[event.name] = event;
-
-        return events;
-      }, {});
-
-      return map;
-    }, {})
   }
 
   public async createEventStreamsTable() {
@@ -139,7 +123,7 @@ export class PostgresPersistenceStrategy {
 
     const data = events.map((event) => [
       event.uuid,
-      event.constructor.name,
+      event.name,
       JSON.stringify(event.payload),
       JSON.stringify(event.metadata),
       event.createdAt,
@@ -185,14 +169,13 @@ export class PostgresPersistenceStrategy {
     const { rows } = await this.client.query(`SELECT * FROM ${tableName} ${whereCondition} ORDER BY no ASC`, values);
 
     return rows.map<IEvent>(({ event_id, payload, event_name, metadata, created_at }: any) => {
-      const EventConstructor = (this.eventMap[metadata._aggregate_type] || {})[event_name] || DomainEvent;
-
-      return (new EventConstructor(
-        metadata._aggregate_id,
+      return (new BaseEvent(
+        event_name,
         payload,
+        metadata,
         event_id,
         new Date(created_at)
-      )).withMetadata(metadata);
+      ));
     });
   }
 

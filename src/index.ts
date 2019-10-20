@@ -1,9 +1,17 @@
 import { Pool } from "pg";
 import { PostgresEventStore } from "./postgres/eventStore";
 import { PostgresWriteLockStrategy } from "./postgres/writeLockStrategy";
+import { AggregateRepository } from "./aggregateRepository";
 
 export interface EventStore {
-  install: () => void
+  install: () => void;
+  load: (streamName: string, fromNumber: number, metadataMatcher?: MetadataMatcher) => Promise<IEvent[]>;
+  appendTo: (streamName: string, events: IEvent[]) => Promise<void>;
+  createRepository: <T extends Aggregate>(
+    streamName: string,
+    aggregate: AggregateConstructor<T>,
+    aggregateEvents: IEventConstructor[]
+  ) => Repository<T>
 }
 
 export interface WriteLockStrategy {
@@ -11,30 +19,42 @@ export interface WriteLockStrategy {
   releaseLock: (name: string) => Promise<void>
 }
 
-export interface AggregateConfiguration {
-  aggregate?: AggregateConstructor<any>;
+export interface Aggregate {
+  popEvents: () => IEvent[]
+  fromHistory: (events: IEvent[]) => Aggregate
+}
+
+export interface RepositoryConfiguration<T> {
+  eventStore: EventStore;
+  aggregate: AggregateConstructor<T>;
   events: IEventConstructor[];
+  streamName: string;
+}
+
+export interface Repository<T extends Aggregate> {
+  save: (aggregate: T) => Promise<void>
+  get: (aggregateId: string) => Promise<T>
 }
 
 export interface ELConfig {
   client: Pool,
   writeLock: WriteLockStrategy,
   eventStreamTable: string,
-  aggregates: AggregateConfiguration[]
   middleware?: EventMiddleWare[]
 }
 
 export interface EventMetadata {
-  _aggregate_id: string;
+  _aggregate_id?: string;
   _aggregate_type?: string;
-  _aggregate_version: number;
+  _aggregate_version?: number;
   [label: string]: any;
 }
 
 export interface IEventConstructor<T = object> {
   new (
-    aggregateId: string,
+    _eventName: string,
     _payload: T,
+    _metadata: EventMetadata,
     _uuid?: string,
     _createdAt?: Date
   ): IEvent;
@@ -46,6 +66,7 @@ export interface AggregateConstructor<T = object> {
 
 export interface IEvent<T = object> {
   uuid: string;
+  name: string;
   payload: T;
   metadata: EventMetadata;
   createdAt: Date
@@ -99,5 +120,6 @@ export interface MetadataMatcher {
 export const createWriteLock = (client: Pool) => new PostgresWriteLockStrategy(client);
 
 export const createEventStore = (config: ELConfig) => new PostgresEventStore(config);
+export const createRepository = <T extends Aggregate>(config: RepositoryConfiguration<T>) => new AggregateRepository<T>(config);
 
 export * from './event'

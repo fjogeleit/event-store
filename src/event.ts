@@ -1,19 +1,14 @@
 import { EventMetadata, IEvent } from "./index";
 import * as uuid from 'uuid/v4';
 
-export class DomainEvent<T = object> implements IEvent<T> {
-  protected _metadata: EventMetadata = {
-    _aggregate_id: '',
-    _aggregate_version: 1
-  };
-
+export class BaseEvent<T = object> implements IEvent<T> {
   public constructor(
-    protected readonly aggregateId: string,
+    protected _eventName: string,
     protected readonly _payload: T,
+    protected readonly _metadata: EventMetadata,
     protected readonly _uuid: string = uuid(),
     protected readonly _createdAt: Date = (new Date())
   ) {
-    this._metadata._aggregate_id = aggregateId;
   }
 
   get uuid() {
@@ -21,7 +16,7 @@ export class DomainEvent<T = object> implements IEvent<T> {
   }
 
   get name() {
-    return this.constructor.name;
+    return this._eventName;
   }
 
   get metadata() {
@@ -36,25 +31,32 @@ export class DomainEvent<T = object> implements IEvent<T> {
     return this._createdAt;
   }
 
+  get aggregateId() {
+    return this._metadata._aggregate_id;
+  }
+
   get version() {
     return this._metadata._aggregate_version;
   }
 
   public withVersion(version: number): IEvent<T> {
-    this._metadata._aggregate_version = version;
-
-    return this;
+    return new (this.constructor as any)(this._eventName, this._payload, { ...this._metadata, _aggregate_version: version }, this._uuid, this._createdAt);
   }
 
   public withAggregateType(type: string): IEvent<T> {
-    this._metadata._aggregate_type = type;
-
-    return this;
+    return new (this.constructor as any)(this._eventName, this._payload, { ...this._metadata, _aggregate_type: type }, this._uuid, this._createdAt);
   }
 
   public withMetadata(metadata: EventMetadata): IEvent<T> {
-    this._metadata = { ...metadata };
+    return new (this.constructor as any)(this._eventName, this._payload, metadata, this._uuid, this._createdAt);
+  }
 
-    return this;
+  public static occur(
+    _aggregateId: string,
+    _payload: object,
+    _uuid: string = uuid(),
+    _createdAt: Date = (new Date())
+  ) {
+    return new (this as any)(this.name, _payload, { _aggregate_id: _aggregateId }, _uuid, _createdAt);
   }
 }

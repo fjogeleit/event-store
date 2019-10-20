@@ -1,12 +1,12 @@
-const DomainEvent = require('../../../../dist').DomainEvent
+const BaseEvent = require('../../../../dist').BaseEvent
 
-module.exports = class UserWasRegistered extends DomainEvent {
+module.exports = class UserWasRegistered extends BaseEvent {
   static with(aggregateId, { username, password }) {
-    return new UserWasRegistered(aggregateId, { username, password })
+    return this.occur(aggregateId, { username, password });
   }
 
   get userId() {
-    return this._metadata._aggregate_id;
+    return this.aggregateId;
   }
 
   get username() {

@@ -1,5 +1,16 @@
-import { ELConfig, EventAction, EventCallback, EventMiddleWare, EventStore, IEvent, MetadataMatcher } from "../index";
+import {
+  Aggregate,
+  AggregateConstructor,
+  ELConfig,
+  EventAction,
+  EventCallback,
+  EventMiddleWare,
+  EventStore,
+  IEvent, IEventConstructor,
+  MetadataMatcher
+} from "../index";
 import { PostgresPersistenceStrategy } from "./persistenceStrategy";
+import { AggregateRepository } from "../aggregateRepository";
 
 interface MiddlewareCollection {
   [EventAction.PRE_APPEND]: EventCallback[]
@@ -45,7 +56,7 @@ export class PostgresEventStore implements EventStore
     }
   }
 
-  public async appendTo(streamName: string, events: IEvent[]): Promise<IEvent[]> {
+  public async appendTo(streamName: string, events: IEvent[]): Promise<void> {
     if (events.length === 0) return;
 
     events = events.map(event => {
@@ -56,20 +67,29 @@ export class PostgresEventStore implements EventStore
 
     await this.persistenceStrategy.appendTo(streamName, events);
 
-    return events.map(event => {
+    events.forEach(event => {
       return this.middleware[EventAction.APPENDED].reduce<IEvent>((event, handler) => {
         return handler(event);
       }, event)
     });
   }
 
-  public async load(streamName: string, fromNumber: number = 0, metadataMatcher?: MetadataMatcher) {
-    const events = await this.persistenceStrategy.load(streamName, fromNumber, 0, metadataMatcher)
+  public async load(streamName: string, fromNumber: number = 0, metadataMatcher?: MetadataMatcher): Promise<IEvent[]> {
+    const events = await this.persistenceStrategy.load(streamName, fromNumber, 0, metadataMatcher);
 
     return events.map(event => {
       return this.middleware[EventAction.LOADED].reduce<IEvent>((event, handler) => {
         return handler(event);
       }, event)
+    });
+  }
+
+  public createRepository<T extends Aggregate>(streamName: string, aggregate: AggregateConstructor<T>, aggregateEvents: IEventConstructor[]) {
+    return new AggregateRepository<T>({
+      eventStore: this,
+      streamName,
+      aggregate,
+      events: aggregateEvents
     });
   }
 }

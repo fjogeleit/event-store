@@ -7,7 +7,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "serve": "nodemon -w ./dist example/server.js",
+    "serve": "nodemon -w ./dist -w ./example example/server.js",
     "build": "tsc -p tsconfig.json",
     "watch": "tsc -p tsconfig.json --watch",
     "prettier": "prettier src/**/*.ts --write && git status"
@@ -19,6 +19,7 @@
     "@types/pg-format": "^1.0.0",
     "@types/sha1": "^1.1.2",
     "@types/uuid": "^3.4.5",
+    "dotenv": "^8.2.0",
     "fastify": "^2.10.0",
     "fastify-postgres": "^2.0.0",
     "jest": "24.9.0",
