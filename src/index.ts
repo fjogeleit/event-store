@@ -1,7 +1,7 @@
 import { Pool } from "pg";
-import { PostgresEventStore } from "./postgres/eventStore";
+import { PostgresEventStore } from "./eventStore";
 import { PostgresWriteLockStrategy } from "./postgres/writeLockStrategy";
-import { AggregateRepository } from "./aggregateRepository";
+import { AggregateRepository } from "./aggregate/aggregateRepository";
 
 export interface EventStore {
   install: () => void;
@@ -44,9 +44,9 @@ export interface ELConfig {
 }
 
 export interface EventMetadata {
-  _aggregate_id?: string;
-  _aggregate_type?: string;
-  _aggregate_version?: number;
+  _aggregate_id: string;
+  _aggregate_type: string;
+  _aggregate_version: number;
   [label: string]: any;
 }
 

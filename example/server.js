@@ -9,6 +9,8 @@ const port = process.env.SERVER_PORT || 3000
 const eventLog = require('../dist/index')
 const User = require('./Model/User/user')
 
+const PostgresProjectionManager = require('../dist/postgres/projectionManager').PostgresProjectionManager
+
 const UserWasRegistered = require('./Model/User/Event/UserWasRegistered')
 const UserNameWasUpdated = require('./Model/User/Event/UserNameWasUpdated')
 

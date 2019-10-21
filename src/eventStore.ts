@@ -1,16 +1,17 @@
 import {
-  Aggregate,
   AggregateConstructor,
   ELConfig,
   EventAction,
   EventCallback,
-  EventMiddleWare,
   EventStore,
-  IEvent, IEventConstructor,
+  IEvent,
+  IEventConstructor,
   MetadataMatcher
-} from "../index";
-import { PostgresPersistenceStrategy } from "./persistenceStrategy";
-import { AggregateRepository } from "../aggregateRepository";
+} from "./index";
+
+import { PostgresPersistenceStrategy } from "./postgres/persistenceStrategy";
+import { AggregateRepository } from "./aggregate/aggregateRepository";
+import { IAggregate } from "./aggregate/types";
 
 interface MiddlewareCollection {
   [EventAction.PRE_APPEND]: EventCallback[]
@@ -74,7 +75,11 @@ export class PostgresEventStore implements EventStore
     });
   }
 
-  public async load(streamName: string, fromNumber: number = 0, metadataMatcher?: MetadataMatcher): Promise<IEvent[]> {
+  public async load(
+    streamName: string,
+    fromNumber: number = 0,
+    metadataMatcher?: MetadataMatcher
+  ): Promise<IEvent[]> {
     const events = await this.persistenceStrategy.load(streamName, fromNumber, 0, metadataMatcher);
 
     return events.map(event => {
@@ -84,7 +89,11 @@ export class PostgresEventStore implements EventStore
     });
   }
 
-  public createRepository<T extends Aggregate>(streamName: string, aggregate: AggregateConstructor<T>, aggregateEvents: IEventConstructor[]) {
+  public createRepository<T extends IAggregate>(
+    streamName: string,
+    aggregate: AggregateConstructor<T>,
+    aggregateEvents: IEventConstructor[]
+  ) {
     return new AggregateRepository<T>({
       eventStore: this,
       streamName,

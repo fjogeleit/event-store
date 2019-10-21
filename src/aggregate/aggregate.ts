@@ -1,6 +1,7 @@
-import { Aggregate, IEvent } from "./index";
+import { IAggregate } from "./types";
+import { IEvent } from "../index";
 
-export abstract class BaseAggregate implements Aggregate {
+export abstract class Aggregate implements IAggregate {
   protected _recordedEvents: IEvent[] = [];
   protected _version: number = 0;
 
@@ -37,7 +38,7 @@ export abstract class BaseAggregate implements Aggregate {
   }
 
   public fromHistory(events: IEvent[]) {
-    return events.reduce<BaseAggregate>((aggregate, event) => {
+    return events.reduce<Aggregate>((aggregate, event) => {
       return aggregate._replay(event)
     }, this)
   }

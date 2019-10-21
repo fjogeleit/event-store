@@ -1,9 +1,9 @@
 const UserWasRegistered = require('./Event/UserWasRegistered')
 const UserNameWasUpdated = require('./Event/UserNameWasUpdated')
 
-const BaseAggregate = require('../../../dist/aggregate').BaseAggregate
+const Aggregate = require('../../../dist/aggregate/aggregate').Aggregate
 
-module.exports = class User extends BaseAggregate {
+module.exports = class User extends Aggregate {
   userId = ''
   username = ''
   password = ''

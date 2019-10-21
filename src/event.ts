@@ -57,6 +57,11 @@ export class BaseEvent<T = object> implements IEvent<T> {
     _uuid: string = uuid(),
     _createdAt: Date = (new Date())
   ) {
-    return new (this as any)(this.name, _payload, { _aggregate_id: _aggregateId }, _uuid, _createdAt);
+    return new (this as any)(
+      this.name, _payload,
+      { _aggregate_id: _aggregateId, _aggregate_type: '', _aggregate_version: 1 },
+      _uuid,
+      _createdAt
+    );
   }
 }

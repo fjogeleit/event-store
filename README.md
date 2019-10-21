@@ -3,7 +3,7 @@
 Event Log is an EventStore heavily inspired by the prooph/event-store v7.0.
 
 ## Implemented:
-- **SimpleStream Strategy**: Create multiple Streams by yourself and manage them by yourself or the Aggregate Helper
+- **SingleStream Strategy**: Create multiple Streams by yourself and manage them by yourself or the Aggregate Helper
 - Event loading and saving to a Stream
 - Projections are in progress
 
