@@ -51,6 +51,10 @@ export class BaseEvent<T = object> implements IEvent<T> {
     return new (this.constructor as any)(this._eventName, this._payload, metadata, this._uuid, this._createdAt);
   }
 
+  public withAddedMetadata(key: string, value: string): IEvent<T> {
+    return new (this.constructor as any)(this._eventName, this._payload, { ...this._metadata, [key]: value }, this._uuid, this._createdAt);
+  }
+
   public static occur(
     _aggregateId: string,
     _payload: object,

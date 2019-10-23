@@ -3,10 +3,11 @@ import * as format from "pg-format";
 
 import {
   ELConfig,
+  EVENT_STREAMS_TABLE,
   FieldType,
-  IEvent,
+  IEvent, IEventConstructor, LoadStreamParameter,
   MetadataMatcher,
-  MetadataOperator
+  MetadataOperator, PROJECTIONS_TABLE
 } from "../index";
 
 import { BaseEvent } from "../event";
@@ -19,15 +20,26 @@ export const generateTable = (streamName: string): string => {
 
 export class PostgresPersistenceStrategy {
   private readonly client: Pool;
+  private readonly eventMap: { [aggregateEvent: string]: IEventConstructor };
 
   constructor(private readonly options: ELConfig) {
     this.client = options.client;
+
+    this.eventMap = (this.options.aggregates || []).reduce((eventMap, { aggregate, events }) => {
+      const items = events.reduce<{ [aggregateEvent: string]: IEventConstructor }>((item, event) => {
+        item[`${aggregate.name}:${event.name}`] = event;
+
+        return item;
+      }, {});
+
+      return { ...eventMap, ...items }
+    }, {});
   }
 
   public async createEventStreamsTable() {
     try {
       const result = await this.client.query('SELECT * FROM pg_catalog.pg_tables WHERE tablename = $1', [
-        this.options.eventStreamTable
+        EVENT_STREAMS_TABLE
       ]);
 
       if (result.rowCount === 1) {
@@ -35,7 +47,7 @@ export class PostgresPersistenceStrategy {
       }
 
       await this.client.query(`
-          CREATE TABLE ${this.options.eventStreamTable} (
+          CREATE TABLE ${EVENT_STREAMS_TABLE} (
             no BIGSERIAL,
             real_stream_name VARCHAR(150) NOT NULL,
             stream_name CHAR(41) NOT NULL,
@@ -52,7 +64,7 @@ export class PostgresPersistenceStrategy {
   public async createProjectionsTable() {
     try {
       const result = await this.client.query('SELECT * FROM pg_catalog.pg_tables WHERE tablename = $1', [
-        'projections'
+        PROJECTIONS_TABLE
       ]);
 
       if (result.rowCount === 1) {
@@ -60,13 +72,13 @@ export class PostgresPersistenceStrategy {
       }
 
       await this.client.query(`
-          CREATE TABLE projections (
+          CREATE TABLE ${PROJECTIONS_TABLE} (
             no BIGSERIAL,
             name VARCHAR(150) NOT NULL,
             position JSONB,
             state JSONB,
             status VARCHAR(28) NOT NULL,
-            locked_until CHAR(26),
+            locked_until TIMESTAMP(6),
             PRIMARY KEY (no),
             UNIQUE (name)
           );
@@ -80,7 +92,7 @@ export class PostgresPersistenceStrategy {
     const tableName = generateTable(streamName);
 
     try {
-      await this.client.query(`INSERT INTO ${this.options.eventStreamTable} (real_stream_name, stream_name, metadata) VALUES ($1, $2, $3)`, [
+      await this.client.query(`INSERT INTO ${EVENT_STREAMS_TABLE} (real_stream_name, stream_name, metadata) VALUES ($1, $2, $3)`, [
         streamName, tableName, JSON.stringify([])
       ]);
 
@@ -94,7 +106,18 @@ export class PostgresPersistenceStrategy {
   };
 
   public async removeStreamFromStreamsTable(streamName: string) {
-    return this.client.query(`DELETE FROM ${this.options.eventStreamTable} WHERE real_stream_name = $1`, [streamName]);
+    return this.client.query(`DELETE FROM ${EVENT_STREAMS_TABLE} WHERE real_stream_name = $1`, [streamName]);
+  };
+
+  public async hasStream(streamName: string) {
+    const result = await this.client.query(`SELECT "no" FROM ${EVENT_STREAMS_TABLE} WHERE real_stream_name = $1`, [streamName]);
+
+    return result.rowCount === 1;
+  };
+
+  public async deleteStream(streamName: string) {
+    await this.removeStreamFromStreamsTable(streamName);
+    await this.dropSchema(streamName);
   };
 
   public async createSchema(streamName: string) {
@@ -159,25 +182,14 @@ export class PostgresPersistenceStrategy {
   }
 
   public async load(streamName: string, fromNumber: number, count?: number, matcher?: MetadataMatcher) {
-    const tableName = generateTable(streamName);
+    const { query, values } = await this.createQuery(streamName, fromNumber, matcher);
 
-    const result = await this.client.query(`SELECT stream_name FROM ${this.options.eventStreamTable} WHERE real_stream_name = $1`, [streamName]);
-
-    if (result.rowCount === 0) {
-      throw new Error(`Stream ${streamName} not found`)
-    }
-
-    const { where, values } = this.createWhereClause(matcher);
-
-    where.push(`no >= $${values.length + 1}`);
-    values.push(fromNumber);
-
-    const whereCondition = `WHERE ${where.join(' AND ')}`;
-
-    const { rows } = await this.client.query(`SELECT * FROM ${tableName} ${whereCondition} ORDER BY no ASC`, values);
+    const { rows } = await this.client.query(query, values);
 
     return rows.map<IEvent>(({ event_id, payload, event_name, metadata, created_at }: any) => {
-      return (new BaseEvent(
+      const EventConstructor = this.eventMap[`${metadata._aggregate_type}:${event_name}`] || BaseEvent;
+
+      return (new EventConstructor(
         event_name,
         payload,
         metadata,
@@ -187,13 +199,67 @@ export class PostgresPersistenceStrategy {
     });
   }
 
-  private createWhereClause(matcher?: MetadataMatcher): { where: string[], values: any[] } {
+  public async mergeAndLoad(streams: Array<LoadStreamParameter>) {
+    let paramCounter = 0;
+    let queries = [];
+    let parameters = [];
+
+    for (const { streamName, fromNumber, matcher } of streams) {
+      const { query, values } = await this.createQuery(streamName, fromNumber, matcher, paramCounter);
+
+      paramCounter += values.length;
+
+      queries.push(query);
+      parameters.push(values);
+    }
+
+    let query = queries[0];
+
+    if (queries.length > 1) {
+      query = queries.map(query => `(${query})`).join(' UNION ALL ') + ' ORDER BY created_at ASC';
+    }
+
+    const params = parameters.reduce<Array<any>>((params, values) => [...params, ...values], []);
+
+    const { rows } = await this.client.query(query, params);
+
+    return rows.map<IEvent>(({ event_id, payload, event_name, metadata, created_at, stream }: any) => {
+      const EventConstructor = this.eventMap[`${metadata._aggregate_type}:${event_name}`] || BaseEvent;
+
+      return (new EventConstructor(
+        event_name,
+        payload,
+        { ...metadata, stream },
+        event_id,
+        new Date(created_at)
+      ));
+    });
+  }
+
+  private async createQuery(streamName: string, fromNumber: number, matcher?: MetadataMatcher, paramCounter = 0) {
+    const result = await this.client.query(`SELECT stream_name FROM ${EVENT_STREAMS_TABLE} WHERE real_stream_name = $1`, [streamName]);
+
+    if (result.rowCount === 0) {
+      throw new Error(`Stream ${streamName} not found`)
+    }
+
+    const tableName = generateTable(streamName);
+
+    const { where, values } = this.createWhereClause(matcher, paramCounter);
+
+    where.push(`no >= $${paramCounter + values.length + 1}`);
+    values.push(fromNumber);
+
+    const whereCondition = `WHERE ${where.join(' AND ')}`;
+
+    return { query: `SELECT *, '${streamName}' as stream FROM ${tableName} ${whereCondition} ORDER BY no ASC`, values };
+  }
+
+  private createWhereClause(matcher?: MetadataMatcher, paramCounter = 0): { where: string[], values: any[] } {
     const where = [];
     const values = [];
 
     if (!matcher) return { where, values };
-
-    let paramCounter = 0;
 
     matcher.data.forEach((match) => {
       let expression = (value: string) => '';

@@ -1,11 +1,12 @@
 import {
   AggregateConstructor,
+  AggregateEventMap,
   ELConfig,
   EventAction,
   EventCallback,
   EventStore,
   IEvent,
-  IEventConstructor,
+  LoadStreamParameter,
   MetadataMatcher
 } from "./index";
 
@@ -22,6 +23,7 @@ interface MiddlewareCollection {
 export class PostgresEventStore implements EventStore
 {
   private readonly persistenceStrategy: PostgresPersistenceStrategy;
+  private readonly _eventMap: AggregateEventMap;
 
   private readonly middleware: MiddlewareCollection = {
     [EventAction.PRE_APPEND]: [],
@@ -36,7 +38,17 @@ export class PostgresEventStore implements EventStore
       carry[middleware.action].push(middleware.handler);
 
       return carry;
-    }, this.middleware)
+    }, this.middleware);
+
+    this._eventMap = options.aggregates.reduce((map, config) => {
+      map[config.aggregate.name] = config;
+
+      return map;
+    }, {});
+  }
+
+  get eventMap() {
+    return this._eventMap
   }
 
   public async install() {
@@ -89,16 +101,32 @@ export class PostgresEventStore implements EventStore
     });
   }
 
+  public async mergeAndLoad(streams: Array<LoadStreamParameter>) {
+    const events = await this.persistenceStrategy.mergeAndLoad(streams);
+
+    return events.map(event => {
+      return this.middleware[EventAction.LOADED].reduce<IEvent>((event, handler) => {
+        return handler(event);
+      }, event)
+    });
+  }
+
+  public hasStream(streamName: string): Promise<boolean> {
+    return this.persistenceStrategy.hasStream(streamName);
+  }
+
+  public delete(streamName: string): Promise<void> {
+    return this.persistenceStrategy.deleteStream(streamName);
+  }
+
   public createRepository<T extends IAggregate>(
     streamName: string,
-    aggregate: AggregateConstructor<T>,
-    aggregateEvents: IEventConstructor[]
+    aggregate: AggregateConstructor<T>
   ) {
     return new AggregateRepository<T>({
       eventStore: this,
       streamName,
-      aggregate,
-      events: aggregateEvents
+      aggregate
     });
   }
 }

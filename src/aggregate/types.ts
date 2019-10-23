@@ -8,7 +8,6 @@ export interface IAggregate {
 export interface RepositoryConfiguration<T> {
   eventStore: EventStore;
   aggregate: AggregateConstructor<T>;
-  events: IEventConstructor[];
   streamName: string;
 }
 

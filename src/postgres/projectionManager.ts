@@ -1,24 +1,33 @@
 import { Pool } from "pg";
-import { EventStore } from "../index";
-import { ProjectionManager, ProjectionStatus } from "../projection/types";
+import { EventStore, PROJECTIONS_TABLE } from "../index";
+import { ProjectionManager, ProjectionStatus, Projector, Query } from "../projection/types";
+import { PostgresProjector } from "./projector";
+import { PostgresQuery } from "./query";
 
-export class PostgresProjectionManager implements ProjectionManager{
+export class PostgresProjectionManager implements ProjectionManager {
   constructor(
-    private readonly eventStreamsTable: string,
     private readonly client: Pool,
     private readonly eventStore: EventStore
   ) {}
 
+  createProjector(name: string): Projector {
+    return new PostgresProjector(name, this, this.eventStore, this.client)
+  }
+
+  createQuery(): Query {
+    return new PostgresQuery(this, this.eventStore, this.client)
+  }
+
   async fetchProjectionState(name: string): Promise<object> {
-    return this._updateProjectionProperty<object>(name, 'state');
+    return this._selectProjectionProperty<object>(name, 'state');
   }
 
   async fetchProjectionStatus(name: string): Promise<ProjectionStatus> {
-    return await this._updateProjectionProperty<ProjectionStatus>(name, 'status');
+    return await this._selectProjectionProperty<ProjectionStatus>(name, 'status');
   }
 
   async fetchProjectionStreamPositions(name: string): Promise<{ [streamName: string]: number}> {
-    return this._updateProjectionProperty<{ [streamName: string]: number}>(name, 'position');
+    return this._selectProjectionProperty<{ [streamName: string]: number}>(name, 'position');
   }
 
   async deleteProjection(name: string, deleteEmittedEvents: boolean = false): Promise<void> {
@@ -33,9 +42,13 @@ export class PostgresProjectionManager implements ProjectionManager{
     return this._updateProjectionStatus(name, ProjectionStatus.STOPPING)
   }
 
+  async idleProjection(name: string): Promise<void> {
+    return this._updateProjectionStatus(name, ProjectionStatus.IDLE)
+  }
+
   private async _updateProjectionStatus(name: string, status: ProjectionStatus): Promise<void> {
     try {
-      const result = await this.client.query(`UPDATE projections SET status = $1 WHERE "name" = $2`, [
+      const result = await this.client.query(`UPDATE ${PROJECTIONS_TABLE} SET status = $1 WHERE "name" = $2`, [
         status,
         name
       ]);
@@ -48,9 +61,9 @@ export class PostgresProjectionManager implements ProjectionManager{
     }
   }
 
-  private async _updateProjectionProperty<T>(name: string, property: string): Promise<T> {
+  private async _selectProjectionProperty<T>(name: string, property: string): Promise<T> {
     try {
-      const result = await this.client.query<T>(`SELECT "${property}" FROM projections WHERE "name" = $1 LIMIT 1`, [name]);
+      const result = await this.client.query<T>(`SELECT "${property}" FROM ${PROJECTIONS_TABLE} WHERE "name" = $1 LIMIT 1`, [name]);
 
       if (result.rowCount === 0) {
         throw new Error(`Projection ${ name } not found`)
@@ -58,7 +71,7 @@ export class PostgresProjectionManager implements ProjectionManager{
 
       return result.rows[0][property];
     } catch (error) {
-      throw new Error(`State fetch failed with ${error.toString()}`)
+      throw new Error(`State fetch failed with ${error.toString()} for ${property}`)
     }
   }
 }

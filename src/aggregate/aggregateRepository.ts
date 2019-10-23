@@ -19,11 +19,14 @@ export class AggregateRepository<T extends IAggregate> implements Repository<T> 
 
   constructor(private readonly options: RepositoryConfiguration<T>) {
     this.eventStore = options.eventStore;
-    this.eventMap = options.events.reduce<{ [name: string]: IEventConstructor }>((events, event) => {
+
+    const events = (options.eventStore.eventMap[options.aggregate.name] || { events: [] as Array<IEventConstructor> }).events;
+
+    this.eventMap = events.reduce<{ [name: string]: IEventConstructor }>((events, event) => {
       events[event.name] = event;
 
       return events;
-    }, {});
+    }, {})
   }
 
   public save(aggregate: T) {

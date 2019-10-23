@@ -3,15 +3,40 @@ import { PostgresEventStore } from "./eventStore";
 import { PostgresWriteLockStrategy } from "./postgres/writeLockStrategy";
 import { AggregateRepository } from "./aggregate/aggregateRepository";
 
+export const EVENT_STREAMS_TABLE = 'event_streams';
+export const PROJECTIONS_TABLE = 'projections';
+
+export interface LoadStreamParameter {
+  streamName: string;
+  fromNumber: number
+  count?: number;
+  matcher?: MetadataMatcher;
+}
+
 export interface EventStore {
-  install: () => void;
-  load: (streamName: string, fromNumber: number, metadataMatcher?: MetadataMatcher) => Promise<IEvent[]>;
-  appendTo: (streamName: string, events: IEvent[]) => Promise<void>;
-  createRepository: <T extends Aggregate>(
+  eventMap: AggregateEventMap
+
+  install(): void;
+  load(streamName: string, fromNumber: number, metadataMatcher?: MetadataMatcher): Promise<IEvent[]>;
+  mergeAndLoad(streams: Array<LoadStreamParameter>): Promise<IEvent[]>;
+  appendTo(streamName: string, events: IEvent[]): Promise<void>;
+  createStream(streamName: string): Promise<void>;
+  hasStream(streamName: string): Promise<boolean>;
+  delete(streamName: string): Promise<void>;
+  createRepository<T extends Aggregate>(
     streamName: string,
     aggregate: AggregateConstructor<T>,
     aggregateEvents: IEventConstructor[]
-  ) => Repository<T>
+  ): Repository<T>
+}
+
+export interface AggregateEventConfig {
+  aggregate: AggregateConstructor,
+  events: IEventConstructor[]
+}
+
+export interface AggregateEventMap {
+  [aggregate: string]: AggregateEventConfig;
 }
 
 export interface WriteLockStrategy {
@@ -39,8 +64,8 @@ export interface Repository<T extends Aggregate> {
 export interface ELConfig {
   client: Pool,
   writeLock: WriteLockStrategy,
-  eventStreamTable: string,
-  middleware?: EventMiddleWare[]
+  middleware?: EventMiddleWare[],
+  aggregates?: AggregateEventConfig[]
 }
 
 export interface EventMetadata {
@@ -102,8 +127,8 @@ export enum MetadataOperator {
 }
 
 export enum FieldType {
-  METADATA,
-  MESSAGE_PROPERTY
+  METADATA= 'metadata',
+  MESSAGE_PROPERTY = 'message_property'
 }
 
 export interface MetadataMatch<T extends MetadataOperator> {
