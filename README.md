@@ -60,8 +60,8 @@ npm run watch
 npm run serve
 ```
 
-- Create a Stream called `users` by using the CLI Tool: `bin/event-log event-stream:create users`
-- Create a Stream called `comments` by using the CreatStream API: `bin/event-log event-stream:create comments`
+- Create a Stream called `users` by using the CLI: `bin/event-log event-stream:create users`
+- Create a Stream called `comments` by using the CLI: `bin/event-log event-stream:create comments`
 
 After the Server started you should see the Message `EventStore installed` in your Terminal if the DB preparation was succeeded
 
