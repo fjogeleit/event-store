@@ -31,6 +31,9 @@
     "ts-jest": "24.1.0",
     "typescript": "^3.6.4"
   },
+  "cli": {
+    "event-log": "./bin/event-log.js"
+  },
   "lint-staged": {
     "*.ts": [
       "prettier --write",
@@ -38,9 +41,13 @@
     ]
   },
   "dependencies": {
+    "commander": "^3.0.2",
+    "figlet": "^1.2.4",
+    "kleur": "^3.0.3",
     "lodash.clonedeep": "^4.5.0",
     "pg": "^7.12.1",
     "pg-format": "^1.0.4",
+    "reflect-metadata": "^0.1.13",
     "sha1": "^1.1.1",
     "uuid": "^3.3.3"
   }

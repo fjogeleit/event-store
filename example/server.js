@@ -1,14 +1,9 @@
-require('dotenv').config({
-  path: 'example/.env'
-})
-
 const fastify = require('fastify')()
 const uuid = require('uuid/v4')
 const port = process.env.SERVER_PORT || 3000
 
 const eventLog = require('../dist/index')
-
-const PostgresProjectionManager = require('../dist/postgres/projectionManager').PostgresProjectionManager
+const config = require('../event-log.config')
 
 const User = require('./Model/User/user')
 const UserWasRegistered = require('./Model/User/Event/UserWasRegistered')
@@ -17,30 +12,8 @@ const UserNameWasUpdated = require('./Model/User/Event/UserNameWasUpdated')
 const Comment = require('./Model/Comment/comment')
 const CommentWasWritten = require('./Model/Comment/Event/CommentWasWritten')
 
-fastify.register(require('fastify-postgres'), {
-  connectionString: process.env.POSTGRES_CONNECTION
-})
-
 fastify.register((fastify, opts, next) => {
-  const eventStore = eventLog.createEventStore({
-    client: fastify.pg,
-    writeLock: eventLog.createWriteLock(fastify.pg),
-    eventStreamTable: 'event_streams',
-    aggregates: [
-      {
-        aggregate: User,
-        events: [
-          UserWasRegistered,
-          UserNameWasUpdated
-        ]
-      }, {
-        aggregate: Comment,
-        events: [
-          CommentWasWritten
-        ]
-      }
-    ]
-  })
+  const eventStore = eventLog.createEventStore(config)
 
   const userRepository = eventStore.createRepository('users', User)
   const commentRepository = eventStore.createRepository('comments', Comment)
@@ -49,23 +22,9 @@ fastify.register((fastify, opts, next) => {
     .then(() => console.info('EventStore installed'))
     .catch((e) => console.error('Error by prepare the EventStore Tables', e))
 
-  fastify.get('/create-stream/:streamName', async (request, reply) => {
-
-    try {
-      await eventStore.createStream(request.params.streamName)
-    } catch (e) {
-      reply.type('application/json').code(500)
-
-      return { content: e.toString() }
-    }
-
-    reply.type('application/json').code(200)
-
-    return { content: 'success' }
-  })
+  const projectionManager = eventStore.createProjectionManager();
 
   fastify.get('/user/:name/append', async (request, reply) => {
-
     try {
       const userId = uuid();
 
@@ -158,37 +117,18 @@ fastify.register((fastify, opts, next) => {
 
   fastify.get('/user/list', async (request, reply) => {
     try {
-      const projectionManager = new PostgresProjectionManager(fastify.pg, eventStore);
-      const projector = projectionManager.createProjector('projection_users');
+      const projection = eventStore.getProjection('projection_users')
 
-      await projector
-        .fromStream({ streamName: 'users' })
-        .init(() => ({}))
-        .when({
-          [UserWasRegistered.name]: (state, event) => {
-            state[event.userId] = { id: event.userId, username: event.username, password: event.password };
-
-            return state;
-          },
-          [UserNameWasUpdated.name]: (state, event) => {
-            state[event.userId].username = event.username;
-
-            return state;
-          }
-        })
-        .run(false);
-
-      return Object.values(projector.getState())
+      return Object.values(await projection.run(false))
     } catch (e) {
       reply.type('application/json').code(500)
 
-      return { content: e.toString() }
+      return { content: e.stack }
     }
   })
 
   fastify.get('/user/:id/history', async (request, reply) => {
     try {
-      const projectionManager = new PostgresProjectionManager(fastify.pg, eventStore);
       const projector = projectionManager.createQuery();
 
       await projector
@@ -221,7 +161,6 @@ fastify.register((fastify, opts, next) => {
 
   fastify.get('/user/:id/comments', async (request, reply) => {
     try {
-      const projectionManager = new PostgresProjectionManager(fastify.pg, eventStore);
       const projector = projectionManager.createQuery();
 
       await projector

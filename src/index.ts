@@ -2,9 +2,15 @@ import { Pool } from "pg";
 import { PostgresEventStore } from "./eventStore";
 import { PostgresWriteLockStrategy } from "./postgres/writeLockStrategy";
 import { AggregateRepository } from "./aggregate/aggregateRepository";
+import { Projection, ProjectionConstructor, ProjectionManager, State } from "./projection/types";
+import { IAggregate } from "./aggregate/types";
 
 export const EVENT_STREAMS_TABLE = 'event_streams';
 export const PROJECTIONS_TABLE = 'projections';
+
+export enum Driver {
+  POSTGRES = 'postgres'
+}
 
 export interface LoadStreamParameter {
   streamName: string;
@@ -16,37 +22,30 @@ export interface LoadStreamParameter {
 export interface EventStore {
   eventMap: AggregateEventMap
 
-  install(): void;
+  install(): Promise<EventStore>;
   load(streamName: string, fromNumber: number, metadataMatcher?: MetadataMatcher): Promise<IEvent[]>;
   mergeAndLoad(streams: Array<LoadStreamParameter>): Promise<IEvent[]>;
   appendTo(streamName: string, events: IEvent[]): Promise<void>;
   createStream(streamName: string): Promise<void>;
   hasStream(streamName: string): Promise<boolean>;
-  delete(streamName: string): Promise<void>;
-  createRepository<T extends Aggregate>(
+  deleteStream(streamName: string): Promise<void>;
+  createProjectionManager(): ProjectionManager
+  createRepository<T extends IAggregate>(
     streamName: string,
     aggregate: AggregateConstructor<T>,
     aggregateEvents: IEventConstructor[]
   ): Repository<T>
-}
 
-export interface AggregateEventConfig {
-  aggregate: AggregateConstructor,
-  events: IEventConstructor[]
+  getProjection<T extends State = any>(name: string): Projection<T>
 }
 
 export interface AggregateEventMap {
-  [aggregate: string]: AggregateEventConfig;
+  [aggregate: string]: AggregateConstructor;
 }
 
 export interface WriteLockStrategy {
   createLock: (name: string) => Promise<void>
   releaseLock: (name: string) => Promise<void>
-}
-
-export interface Aggregate {
-  popEvents: () => IEvent[]
-  fromHistory: (events: IEvent[]) => Aggregate
 }
 
 export interface RepositoryConfiguration<T> {
@@ -56,16 +55,24 @@ export interface RepositoryConfiguration<T> {
   streamName: string;
 }
 
-export interface Repository<T extends Aggregate> {
+export interface Repository<T extends IAggregate> {
   save: (aggregate: T) => Promise<void>
   get: (aggregateId: string) => Promise<T>
 }
 
-export interface ELConfig {
-  client: Pool,
-  writeLock: WriteLockStrategy,
-  middleware?: EventMiddleWare[],
-  aggregates?: AggregateEventConfig[]
+export interface Configuration<D extends Driver = Driver.POSTGRES> {
+  connectionString: D extends Driver.POSTGRES ? string : never,
+  projections?: ProjectionConstructor<Projection<any>>[],
+  aggregates?: AggregateConstructor[],
+  middleware?: EventMiddleWare[]
+}
+
+export interface Options {
+  client: Pool;
+  aggregates: AggregateConstructor[];
+  middleware: EventMiddleWare[];
+  writeLock: WriteLockStrategy;
+  projections: ProjectionConstructor<Projection<any>>[];
 }
 
 export interface EventMetadata {
@@ -87,6 +94,7 @@ export interface IEventConstructor<T = object> {
 
 export interface AggregateConstructor<T = object> {
   new (): T;
+  registeredEvents: IEventConstructor[];
 }
 
 export interface IEvent<T = object> {
@@ -142,9 +150,16 @@ export interface MetadataMatcher {
   data: MetadataMatch<MetadataOperator>[];
 }
 
-export const createWriteLock = (client: Pool) => new PostgresWriteLockStrategy(client);
+export const createEventStore = ({ connectionString, aggregates, projections, middleware }: Configuration) => {
+  const client = new Pool({ connectionString });
 
-export const createEventStore = (config: ELConfig) => new PostgresEventStore(config);
-export const createRepository = <T extends Aggregate>(config: RepositoryConfiguration<T>) => new AggregateRepository<T>(config);
+  return new PostgresEventStore({
+    client,
+    writeLock: new PostgresWriteLockStrategy(client),
+    aggregates: aggregates || [],
+    middleware: middleware || [],
+    projections: projections || []
+  });
+};
 
 export * from './event'

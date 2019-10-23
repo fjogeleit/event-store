@@ -20,4 +20,8 @@ module.exports = class Comment extends Aggregate {
     this.commentId = event.commentId;
     this.message = event.message;
   }
+
+  static registeredEvents = [
+    CommentWasWritten
+  ]
 }

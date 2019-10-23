@@ -1,7 +1,7 @@
 import {
   AggregateConstructor,
   AggregateEventMap,
-  ELConfig,
+  Options,
   EventAction,
   EventCallback,
   EventStore,
@@ -13,6 +13,8 @@ import {
 import { PostgresPersistenceStrategy } from "./postgres/persistenceStrategy";
 import { AggregateRepository } from "./aggregate/aggregateRepository";
 import { IAggregate } from "./aggregate/types";
+import { PostgresProjectionManager } from "./postgres/projectionManager";
+import { Projection, ProjectionManager, State } from "./projection/types";
 
 interface MiddlewareCollection {
   [EventAction.PRE_APPEND]: EventCallback[]
@@ -31,7 +33,7 @@ export class PostgresEventStore implements EventStore
     [EventAction.LOADED]: []
   };
 
-  constructor(private readonly options: ELConfig) {
+  constructor(private readonly options: Options) {
     this.persistenceStrategy = new PostgresPersistenceStrategy(this.options);
 
     this.middleware = (this.options.middleware || []).reduce<MiddlewareCollection>((carry, middleware) => {
@@ -40,8 +42,8 @@ export class PostgresEventStore implements EventStore
       return carry;
     }, this.middleware);
 
-    this._eventMap = options.aggregates.reduce((map, config) => {
-      map[config.aggregate.name] = config;
+    this._eventMap = (options.aggregates || []).reduce((map, aggregate) => {
+      map[aggregate.name] = aggregate;
 
       return map;
     }, {});
@@ -54,6 +56,8 @@ export class PostgresEventStore implements EventStore
   public async install() {
     await this.persistenceStrategy.createEventStreamsTable();
     await this.persistenceStrategy.createProjectionsTable();
+
+    return this;
   }
 
   public async createStream(streamName: string) {
@@ -115,7 +119,7 @@ export class PostgresEventStore implements EventStore
     return this.persistenceStrategy.hasStream(streamName);
   }
 
-  public delete(streamName: string): Promise<void> {
+  public deleteStream(streamName: string): Promise<void> {
     return this.persistenceStrategy.deleteStream(streamName);
   }
 
@@ -128,5 +132,19 @@ export class PostgresEventStore implements EventStore
       streamName,
       aggregate
     });
+  }
+
+  public createProjectionManager(): ProjectionManager {
+    return new PostgresProjectionManager(this.options.client, this);
+  }
+
+  public getProjection<T extends State = any>(name: string): Projection<T> {
+    const Projection = this.options.projections.find((projection) => projection.projectionName === name);
+
+    if (!Projection) {
+      throw new Error(`A Projection with name ${name} does not exists`);
+    }
+
+    return new Projection(this.createProjectionManager());
   }
 }

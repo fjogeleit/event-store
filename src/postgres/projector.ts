@@ -123,8 +123,17 @@ export class PostgresProjector<T extends State> implements Projector {
 
   async delete(deleteEmittedEvents: boolean = false): Promise<void> {
     try {
-      await this.manager.deleteProjection(this.name, deleteEmittedEvents);
-    } catch {
+      const result = await this.client.query(`DELETE FROM ${PROJECTIONS_TABLE} WHERE "name" = $1`, [this.name]);
+
+      if (result.rowCount === 0) {
+        throw new Error(`Projection ${name} not found`)
+      }
+    } catch (error) {
+      throw new Error(`ProjectionTable update failed ${error.toString()}`)
+    }
+
+    if (deleteEmittedEvents) {
+      await this.eventStore.deleteStream(this.name)
     }
 
     this.isStopped = true;
@@ -147,7 +156,7 @@ export class PostgresProjector<T extends State> implements Projector {
 
     try {
       const result = await this.client.query(`UPDATE ${PROJECTIONS_TABLE} SET status = $1, state = $2, position = $3 WHERE "name" = $4`, [
-        ProjectionStatus.RESETTING,
+        ProjectionStatus.IDLE,
         JSON.stringify(this.state || {}),
         JSON.stringify(this.streamPositions),
         this.name
@@ -161,8 +170,9 @@ export class PostgresProjector<T extends State> implements Projector {
     }
 
     try {
-      await this.eventStore.delete(this.name)
-    } catch {
+      await this.eventStore.deleteStream(this.name)
+    } catch(e) {
+      console.error(e)
     }
   }
 
@@ -392,7 +402,7 @@ export class PostgresProjector<T extends State> implements Projector {
   private async fetchRemoteStatus(): Promise<ProjectionStatus> {
     try {
       return await this.manager.fetchProjectionStatus(this.name)
-    } catch {
+    } catch(e) {
       return ProjectionStatus.RUNNING;
     }
   }

@@ -1,0 +1,117 @@
+#! /usr/bin/env node
+const { createEventStore } = require('../dist')
+const { green, red } = require('kleur')
+const { Command } = require('commander');
+const util = require('util')
+
+const program = new Command();
+
+const getEventStore = () => {
+  if (!program.config) {
+    throw new Error('config file is required')
+  }
+
+  const eventStore = createEventStore(require(program.config));
+
+  return eventStore.install();
+}
+
+program
+  .version('0.1.0')
+  .usage('--help')
+  .description('CLI to manage Event Log streams')
+  .option('-c, --config <path>', 'Path to your event-log.config file', '../event-log.config.js')
+
+program
+  .command('event-stream:create <streamName>')
+  .description('Creates an new EventStream')
+  .action(async (streamName) => {
+    try {
+      const eventStore = await getEventStore(program.envFile);
+      await eventStore.createStream(streamName);
+
+      console.log(green(`EventStream "${streamName}" successfully created`))
+    } catch (error) {
+      console.log(red(`EventStore initialisation failed with ${error.toString()}`))
+    }
+  })
+
+program
+  .command('event-stream:delete <streamName>')
+  .description('Deletes an existing EventStream')
+  .action(async (streamName) => {
+    try {
+      const eventStore = await getEventStore(program.envFile);
+      await eventStore.deleteStream(streamName);
+
+      console.log(green(`EventStream "${streamName}" successfully deleted`))
+    } catch (error) {
+      console.log(red(`EventStore initialisation failed with ${error.toString()}`))
+    }
+  })
+
+program
+  .command('projection:run <name>')
+  .option('-k, --keep-running', '', false)
+  .option('-s, --show-state', 'Show the new state after run', false)
+  .description('Running a projection')
+  .action(async (name, { keepRunning, showState }) => {
+    try {
+      const eventStore = await getEventStore();
+      const projection = eventStore.getProjection(name);
+
+      const state = await projection.run(keepRunning)
+
+      console.log(green(`Running the projection ${projection.constructor.projectionName} completed`))
+
+      if (showState) {
+        console.log(`
+        
+NEW STATE
+====================================================================
+${util.inspect(state, false, null, true)}
+====================================================================
+        `);
+      }
+
+    } catch (error) {
+      console.log(red(`Running the projection failed with ${error.toString()}`))
+    }
+  })
+
+program
+  .command('projection:reset <name>')
+  .description('Reset a projection')
+  .action(async (name) => {
+    try {
+      const eventStore = await getEventStore();
+      const projection = eventStore.getProjection(name);
+
+      await projection.reset()
+
+      console.log(green(`Reset the projection ${projection.constructor.projectionName} completed`))
+
+    } catch (error) {
+      console.log(red(`Running the projection failed with ${error.toString()}`))
+    }
+  })
+
+program
+  .command('projection:delete <name>')
+  .description('Delete a projection')
+  .option('-d, --delete-emitted-events', '', false)
+  .action(async (name, cmd) => {
+    try {
+      const eventStore = await getEventStore();
+      const projection = eventStore.getProjection(name);
+
+      await projection.delete(cmd.deleteEmittedEvents)
+
+      console.log(green(`Delete the projection ${projection.constructor.projectionName} completed`))
+
+    } catch (error) {
+      console.log(red(`Running the projection failed with ${error.toString()}`))
+    }
+  })
+
+program.parse(process.argv);

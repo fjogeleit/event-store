@@ -15,6 +15,28 @@ Event Log is an EventStore heavily inspired by the prooph/event-store v7.0.
 - Create persisted State with an `Projector` or temporary created State with a `Query`
 - Fetching multiple streams creates a merged stream and run over the events in historical order
 
+## Using the Command Line Tool
+
+The CLI `bin/event-log` supports the usage of Event Log with different helper commands for EventStreams and Projections.
+
+```
+Usage: event-log [command] --help
+
+CLI to manage Event Log streams
+
+Options:
+  -V, --version                       output the version number
+  -c, --config <path>                 Path to your event-log.config file (default: "../event-log.config.js")
+  -h, --help                          output usage information
+
+Commands:
+  event-stream:create <streamName>    Creates an new EventStream
+  event-stream:delete <streamName>    Deletes an existing EventStream
+  projection:run [options] <name>     Running a projection
+  projection:reset <name>             Reset a projection
+  projection:delete [options] <name>  Delete a projection
+```
+
 ## Run the example
 
 ### Requirements
@@ -22,6 +44,8 @@ Event Log is an EventStore heavily inspired by the prooph/event-store v7.0.
 1. A running Postgres DB. - You can yous the docker-compose.yaml to start one over docker
 
 2. Create your .env File under `./example`. - You can copy and rename the `.env.default` to `.env and change the values to your configuration
+
+3. Make the CLI Tool executable with the following command `chmod +x bin/event-log`
 
 ### Running the Example
 
@@ -36,18 +60,14 @@ npm run watch
 npm run serve
 ```
 
-3. Create a Stream called `users` by using the CreatStream API: `http://localhost:3000/create-stream/users`
-4. Create a Stream called `comments` by using the CreatStream API: `http://localhost:3000/create-stream/comments`
+- Create a Stream called `users` by using the CLI Tool: `bin/event-log event-stream:create users`
+- Create a Stream called `comments` by using the CreatStream API: `bin/event-log event-stream:create comments`
 
 After the Server started you should see the Message `EventStore installed` in your Terminal if the DB preparation was succeeded
 
 ### Existing APIs are
 
 ```
-Create a Strem:
-http://localhost:3000/create-stream/:streamName
-(Returns the UserID you can fetch afterwards)
-
 Create a User:
 http://localhost:3000/append/user/:username
 (Returns the UserID you can fetch afterwards)
@@ -72,6 +92,6 @@ Query Events: User EventHistory:
 http://localhost:3000/user/:id/history
 (Returns the updated user)
 
-Query multilpe StreamEvents: User CommentHistory:
+Query multilpe StreamEvents: User Comment List:
 http://localhost:3000/user/:id/comments
 ```

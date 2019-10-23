@@ -1,5 +1,5 @@
 import { IAggregate } from "./types";
-import { IEvent } from "../index";
+import { IEvent, IEventConstructor } from "../index";
 
 export abstract class Aggregate implements IAggregate {
   protected _recordedEvents: IEvent[] = [];
@@ -42,4 +42,6 @@ export abstract class Aggregate implements IAggregate {
       return aggregate._replay(event)
     }, this)
   }
+
+  public abstract registeredEvents: IEventConstructor[];
 }

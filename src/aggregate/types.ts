@@ -3,6 +3,7 @@ import { AggregateConstructor, EventStore, IEvent, IEventConstructor } from "../
 export interface IAggregate {
   popEvents: () => IEvent[]
   fromHistory: (events: IEvent[]) => IAggregate
+  registeredEvents: IEventConstructor[]
 }
 
 export interface RepositoryConfiguration<T> {

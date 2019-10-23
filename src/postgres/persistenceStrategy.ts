@@ -2,12 +2,12 @@ import { Pool } from "pg";
 import * as format from "pg-format";
 
 import {
-  ELConfig,
+  Configuration,
   EVENT_STREAMS_TABLE,
   FieldType,
   IEvent, IEventConstructor, LoadStreamParameter,
   MetadataMatcher,
-  MetadataOperator, PROJECTIONS_TABLE
+  MetadataOperator, Options, PROJECTIONS_TABLE
 } from "../index";
 
 import { BaseEvent } from "../event";
@@ -22,11 +22,11 @@ export class PostgresPersistenceStrategy {
   private readonly client: Pool;
   private readonly eventMap: { [aggregateEvent: string]: IEventConstructor };
 
-  constructor(private readonly options: ELConfig) {
+  constructor(private readonly options: Options) {
     this.client = options.client;
 
-    this.eventMap = (this.options.aggregates || []).reduce((eventMap, { aggregate, events }) => {
-      const items = events.reduce<{ [aggregateEvent: string]: IEventConstructor }>((item, event) => {
+    this.eventMap = this.options.aggregates.reduce((eventMap, aggregate) => {
+      const items = aggregate.registeredEvents.reduce<{ [aggregateEvent: string]: IEventConstructor }>((item, event) => {
         item[`${aggregate.name}:${event.name}`] = event;
 
         return item;

@@ -89,3 +89,16 @@ export interface Query {
 
   run(): Promise<void>;
 }
+
+export interface ProjectionConstructor<T extends Projection<any>> {
+  new(projectorManager: ProjectionManager): T
+  projectionName: string;
+}
+
+export interface Projection<T extends State> {
+  projectionName: string;
+
+  run(keepRunning: boolean): Promise<T>;
+  reset(): Promise<void>;
+  delete(deleteEmittedEvents: boolean): Promise<void>;
+}
