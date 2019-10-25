@@ -1,4 +1,4 @@
-const BaseEvent = require('../../../../dist').BaseEvent
+const { BaseEvent } = require('../../../../dist')
 
 module.exports = class UserWasRegistered extends BaseEvent {
   static with(aggregateId, { username, password }) {

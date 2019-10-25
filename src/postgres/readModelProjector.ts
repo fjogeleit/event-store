@@ -1,14 +1,22 @@
-import { IProjectionManager, ProjectionStatus, IProjector, IQuery, State, Stream } from "../projection/types";
+import {
+  IProjectionManager,
+  ProjectionStatus,
+  IProjector,
+  IQuery,
+  State,
+  Stream,
+  IReadModel, IReadModelProjector
+} from "../projection/types";
 import { EVENT_STREAMS_TABLE, IEventStore, IEvent, MetadataMatcher, PROJECTIONS_TABLE } from "../index";
 import { Pool } from "pg";
 
 const cloneDeep = require('lodash.clonedeep');
 
-export class PostgresProjector<T extends State = State> implements IProjector<T> {
+export class PostgresReadModelProjector<R extends IReadModel, T extends State = State> implements IReadModelProjector<R, T> {
   private state?: T;
   private initHandler?: () => T;
-  private handlers?: { [event: string]: <R extends IEvent>(state: T, event: R) => T | Promise<T> };
-  private handler?: <R extends IEvent>(state: T, event: R) => T | Promise<T>;
+  private handlers?: { [event: string]: <S extends IEvent>(state: T, event: S) => T | Promise<T> };
+  private handler?: <S extends IEvent>(state: T, event: S) => T | Promise<T>;
   private metadataMatchers: { [streamName: string]: MetadataMatcher } = {};
 
   private streamCreated: boolean = false;
@@ -28,10 +36,11 @@ export class PostgresProjector<T extends State = State> implements IProjector<T>
     private readonly manager: IProjectionManager,
     private readonly eventStore: IEventStore,
     private readonly client: Pool,
+    public readonly readModel: R,
     private status: ProjectionStatus = ProjectionStatus.IDLE
   ) {}
 
-  init(callback: () => T): IProjector<T> {
+  init(callback: () => T): IReadModelProjector<R, T> {
     if (this.initHandler !== undefined) {
       throw new Error(`Projection already initialized`)
     }
@@ -44,7 +53,7 @@ export class PostgresProjector<T extends State = State> implements IProjector<T>
     return this;
   }
 
-  fromAll(): IProjector<T> {
+  fromAll(): IReadModelProjector<R, T> {
     if (this.query.all || this.query.streams.length > 0) {
       throw new Error('From was already called')
     }
@@ -54,7 +63,7 @@ export class PostgresProjector<T extends State = State> implements IProjector<T>
     return this;
   }
 
-  fromStream(stream: Stream): IProjector<T> {
+  fromStream(stream: Stream): IReadModelProjector<R, T> {
     if (this.query.all || this.query.streams.length > 0) {
       throw new Error('From was already called')
     }
@@ -65,7 +74,7 @@ export class PostgresProjector<T extends State = State> implements IProjector<T>
     return this;
   }
 
-  fromStreams(...streams: Stream[]): IProjector<T> {
+  fromStreams(...streams: Stream[]): IReadModelProjector<R, T> {
     if (this.query.all || this.query.streams.length > 0) {
       throw new Error('From was already called')
     }
@@ -80,7 +89,7 @@ export class PostgresProjector<T extends State = State> implements IProjector<T>
     return this;
   }
 
-  when(handlers: { [p: string]: <R extends IEvent>(state: T, event: R) => T }): IProjector<T> {
+  when(handlers: { [p: string]: <S extends IEvent>(state: T, event: S) => T }): IReadModelProjector<R, T> {
     if (this.handler || this.handlers) {
       throw new Error('When was already called')
     }
@@ -92,7 +101,7 @@ export class PostgresProjector<T extends State = State> implements IProjector<T>
     return this;
   }
 
-  whenAny(handler: <R extends IEvent>(state: T, event: R) => T): IProjector<T> {
+  whenAny(handler: <S extends IEvent>(state: T, event: S) => T): IReadModelProjector<R, T> {
     if (this.handler || this.handlers) {
       throw new Error('When was already called')
     }
@@ -121,7 +130,7 @@ export class PostgresProjector<T extends State = State> implements IProjector<T>
     await this.eventStore.appendTo(this.name, [event]);
   }
 
-  async delete(deleteEmittedEvents: boolean = false): Promise<void> {
+  async delete(deleteProjection: boolean = true): Promise<void> {
     try {
       const result = await this.client.query(`DELETE FROM ${PROJECTIONS_TABLE} WHERE "name" = $1`, [this.name]);
 
@@ -132,8 +141,8 @@ export class PostgresProjector<T extends State = State> implements IProjector<T>
       throw new Error(`ProjectionTable update failed ${error.toString()}`)
     }
 
-    if (deleteEmittedEvents) {
-      await this.eventStore.deleteStream(this.name)
+    if (deleteProjection) {
+      await this.readModel.delete();
     }
 
     this.isStopped = true;
@@ -148,6 +157,7 @@ export class PostgresProjector<T extends State = State> implements IProjector<T>
 
   async reset(): Promise<void> {
     this.streamPositions = {};
+    await this.readModel.reset();
     this.state = undefined;
 
     if (this.initHandler !== undefined) {
@@ -228,6 +238,11 @@ export class PostgresProjector<T extends State = State> implements IProjector<T>
     }
 
     await this.acquireLock();
+
+    if (await this.readModel.isInitialized() === false) {
+      await this.readModel.init();
+    }
+
     await this.prepareStreamPosition();
     await this.load();
 
@@ -328,6 +343,8 @@ export class PostgresProjector<T extends State = State> implements IProjector<T>
 
   private async persist(): Promise<void> {
     try {
+      await this.readModel.persist();
+
       const result = await this.client.query(`UPDATE ${PROJECTIONS_TABLE} SET locked_until = $1, state = $2, position = $3 WHERE "name" = $4`, [
         this.createLockUntil(new Date()),
         JSON.stringify(this.state || {}),

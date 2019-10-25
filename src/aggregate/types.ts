@@ -1,4 +1,4 @@
-import { AggregateConstructor, EventStore, IEvent, IEventConstructor } from "../index";
+import { AggregateConstructor, IEventStore, IEvent, IEventConstructor } from "../index";
 
 export interface IAggregate {
   popEvents: () => IEvent[]
@@ -7,7 +7,7 @@ export interface IAggregate {
 }
 
 export interface RepositoryConfiguration<T> {
-  eventStore: EventStore;
+  eventStore: IEventStore;
   aggregate: AggregateConstructor<T>;
   streamName: string;
 }

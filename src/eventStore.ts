@@ -4,17 +4,21 @@ import {
   Options,
   EventAction,
   EventCallback,
-  EventStore,
+  IEventStore,
   IEvent,
   LoadStreamParameter,
   MetadataMatcher
 } from "./index";
 
-import { PostgresPersistenceStrategy } from "./postgres/persistenceStrategy";
 import { AggregateRepository } from "./aggregate/aggregateRepository";
 import { IAggregate } from "./aggregate/types";
-import { PostgresProjectionManager } from "./postgres/projectionManager";
-import { Projection, ProjectionManager, State } from "./projection/types";
+import {
+  IProjection,
+  IProjectionConstructor,
+  IProjectionManager, IReadModel,
+  IReadModelProjection,
+  State
+} from "./projection/types";
 
 interface MiddlewareCollection {
   [EventAction.PRE_APPEND]: EventCallback[]
@@ -22,20 +26,33 @@ interface MiddlewareCollection {
   [EventAction.LOADED]: EventCallback[]
 }
 
-export class PostgresEventStore implements EventStore
-{
-  private readonly persistenceStrategy: PostgresPersistenceStrategy;
-  private readonly _eventMap: AggregateEventMap;
+export interface PersistenceStrategy {
+  createEventStreamsTable(): Promise<void>
+  createProjectionsTable(): Promise<void>
+  addStreamToStreamsTable(streamName: string): Promise<void>
+  removeStreamFromStreamsTable(streamName: string): Promise<void>
+  deleteStream(streamName: string): Promise<void>
+  createSchema(streamName: string): Promise<void>
+  dropSchema(streamName: string): Promise<void>
+  appendTo<T = object>(streamName: string, events: IEvent<T>[]): Promise<void>
+  load(streamName: string, fromNumber: number, count?: number, matcher?: MetadataMatcher): Promise<IEvent[]>
+  mergeAndLoad(streams: Array<LoadStreamParameter>): Promise<IEvent[]>
+  hasStream(streamName: string): Promise<boolean>
+  deleteStream(streamName: string): Promise<void>
+}
 
-  private readonly middleware: MiddlewareCollection = {
+export abstract class EventStore implements IEventStore
+{
+  protected readonly _eventMap: AggregateEventMap;
+  protected readonly abstract persistenceStrategy: PersistenceStrategy;
+
+  protected readonly middleware: MiddlewareCollection = {
     [EventAction.PRE_APPEND]: [],
     [EventAction.APPENDED]: [],
     [EventAction.LOADED]: []
   };
 
-  constructor(private readonly options: Options) {
-    this.persistenceStrategy = new PostgresPersistenceStrategy(this.options);
-
+  protected constructor(protected readonly options: Options) {
     this.middleware = (this.options.middleware || []).reduce<MiddlewareCollection>((carry, middleware) => {
       carry[middleware.action].push(middleware.handler);
 
@@ -105,7 +122,7 @@ export class PostgresEventStore implements EventStore
     });
   }
 
-  public async mergeAndLoad(streams: Array<LoadStreamParameter>) {
+  public async mergeAndLoad(streams: LoadStreamParameter[]) {
     const events = await this.persistenceStrategy.mergeAndLoad(streams);
 
     return events.map(event => {
@@ -134,17 +151,25 @@ export class PostgresEventStore implements EventStore
     });
   }
 
-  public createProjectionManager(): ProjectionManager {
-    return new PostgresProjectionManager(this.options.client, this);
-  }
+  public abstract createProjectionManager(): IProjectionManager;
 
-  public getProjection<T extends State = any>(name: string): Projection<T> {
+  public getProjection<T extends State = any>(name: string): IProjection<T> {
     const Projection = this.options.projections.find((projection) => projection.projectionName === name);
 
     if (!Projection) {
       throw new Error(`A Projection with name ${name} does not exists`);
     }
 
-    return new Projection(this.createProjectionManager());
+    return new (Projection as IProjectionConstructor<T>)(this.createProjectionManager())
+  }
+
+  public getReadModelProjection<R extends IReadModel, T extends State = any>(name: string): IReadModelProjection<R, T> {
+    const { projection: ReadModelProjection, readModel} = this.options.readModelProjections.find(({ projection }) => projection.projectionName === name);
+
+    if (!ReadModelProjection) {
+      throw new Error(`A Projection with name ${name} does not exists`);
+    }
+
+    return new ReadModelProjection<R, T>(this.createProjectionManager(), readModel);
   }
 }

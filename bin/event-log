@@ -58,7 +58,14 @@ program
   .action(async (name, { keepRunning, showState }) => {
     try {
       const eventStore = await getEventStore();
-      const projection = eventStore.getProjection(name);
+
+      let projection = null;
+
+      try {
+        projection = eventStore.getProjection(name);
+      } catch {
+        projection = eventStore.getReadModelProjection(name);
+      }
 
       const state = await projection.run(keepRunning)
 
@@ -73,7 +80,6 @@ ${util.inspect(state, false, null, true)}
 ====================================================================
         `);
       }
-
     } catch (error) {
       console.log(red(`Running the projection failed with ${error.toString()}`))
     }
@@ -85,7 +91,13 @@ program
   .action(async (name) => {
     try {
       const eventStore = await getEventStore();
-      const projection = eventStore.getProjection(name);
+      let projection = null;
+
+      try {
+        projection = eventStore.getProjection(name);
+      } catch {
+        projection = eventStore.getReadModelProjection(name);
+      }
 
       await projection.reset()
 
@@ -100,12 +112,18 @@ program
   .command('projection:delete <name>')
   .description('Delete a projection')
   .option('-d, --delete-emitted-events', '', false)
-  .action(async (name, cmd) => {
+  .action(async (name, { deleteEmittedEvents }) => {
     try {
       const eventStore = await getEventStore();
-      const projection = eventStore.getProjection(name);
+      let projection = null;
 
-      await projection.delete(cmd.deleteEmittedEvents)
+      try {
+        projection = eventStore.getProjection(name);
+      } catch {
+        projection = eventStore.getReadModelProjection(name);
+      }
+
+      await projection.delete(deleteEmittedEvents)
 
       console.log(green(`Delete the projection ${projection.constructor.projectionName} completed`))
 

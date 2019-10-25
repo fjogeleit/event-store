@@ -1,10 +1,9 @@
-import { ProjectionManager, ProjectionStatus, Projector, Query, State, Stream } from "../projection/types";
-import { EVENT_STREAMS_TABLE, EventStore, IEvent, MetadataMatcher, PROJECTIONS_TABLE } from "../index";
-import { Pool } from "pg";
+import { IProjectionManager, ProjectionStatus, IQuery, State, Stream } from "./types";
+import { IEventStore, IEvent, MetadataMatcher } from "../index";
 
 const cloneDeep = require('lodash.clonedeep');
 
-export class PostgresQuery<T extends State> implements Query {
+export class Query<T extends State> implements IQuery {
   private state?: T;
   private initHandler?: () => T;
   private handlers?: { [event: string]: (state: T, event: IEvent) => T | Promise<T> };
@@ -17,13 +16,12 @@ export class PostgresQuery<T extends State> implements Query {
   private query: { all: boolean, streams: Array<string> } = { all: false, streams: [] };
 
   constructor(
-    private readonly manager: ProjectionManager,
-    private readonly eventStore: EventStore,
-    private readonly client: Pool,
+    private readonly manager: IProjectionManager,
+    private readonly eventStore: IEventStore,
     private status: ProjectionStatus = ProjectionStatus.IDLE
   ) {}
 
-  init(callback: () => T): Query {
+  init(callback: () => T): IQuery {
     if (this.initHandler !== undefined) {
       throw new Error(`Projection already initialized`)
     }
@@ -36,7 +34,7 @@ export class PostgresQuery<T extends State> implements Query {
     return this;
   }
 
-  fromAll(): Query {
+  fromAll(): IQuery {
     if (this.query.all || this.query.streams.length > 0) {
       throw new Error('From was already called')
     }
@@ -46,7 +44,7 @@ export class PostgresQuery<T extends State> implements Query {
     return this;
   }
 
-  fromStream(stream: Stream): Query {
+  fromStream(stream: Stream): IQuery {
     if (this.query.all || this.query.streams.length > 0) {
       throw new Error('From was already called')
     }
@@ -57,7 +55,7 @@ export class PostgresQuery<T extends State> implements Query {
     return this;
   }
 
-  fromStreams(...streams: Stream[]): Query {
+  fromStreams(...streams: Stream[]): IQuery {
     if (this.query.all || this.query.streams.length > 0) {
       throw new Error('From was already called')
     }
@@ -72,7 +70,7 @@ export class PostgresQuery<T extends State> implements Query {
     return this;
   }
 
-  when(handlers: { [p: string]: <T extends State>(state: T, event: IEvent) => T }): Query {
+  when(handlers: { [p: string]: <T extends State>(state: T, event: IEvent) => T }): IQuery {
     if (this.handler || this.handlers) {
       throw new Error('When was already called')
     }
@@ -84,7 +82,7 @@ export class PostgresQuery<T extends State> implements Query {
     return this;
   }
 
-  whenAny(handler: <T extends State>(state: T, event: IEvent) => T): Query {
+  whenAny(handler: <T extends State>(state: T, event: IEvent) => T): IQuery {
     if (this.handler || this.handlers) {
       throw new Error('When was already called')
     }
@@ -180,10 +178,8 @@ export class PostgresQuery<T extends State> implements Query {
 
     if (this.query.all) {
       try {
-        const result = await this.client.query<{ real_stream_name: string }>(`SELECT real_stream_name FROM ${ EVENT_STREAMS_TABLE } WHERE real_stream_name NOT LIKE '$%'`);
-
-        streamPositions = result.rows.reduce((acc, stream) => {
-          acc[stream.real_stream_name] = 0;
+        streamPositions = (await this.manager.fetchAllProjectionNames()).reduce((acc, streamName) => {
+          acc[streamName] = 0;
 
           return acc;
         }, {});

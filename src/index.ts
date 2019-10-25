@@ -1,9 +1,12 @@
-import { Pool } from "pg";
-import { PostgresEventStore } from "./eventStore";
-import { PostgresWriteLockStrategy } from "./postgres/writeLockStrategy";
-import { AggregateRepository } from "./aggregate/aggregateRepository";
-import { Projection, ProjectionConstructor, ProjectionManager, State } from "./projection/types";
+import {
+  IProjection,
+  IProjectionConstructor,
+  IProjectionManager, IReadModel,
+  IReadModelProjection, IReadModelProjectionConstructor,
+  State
+} from "./projection/types";
 import { IAggregate } from "./aggregate/types";
+import { PostgresEventStore } from "./postgres/eventStore";
 
 export const EVENT_STREAMS_TABLE = 'event_streams';
 export const PROJECTIONS_TABLE = 'projections';
@@ -19,24 +22,25 @@ export interface LoadStreamParameter {
   matcher?: MetadataMatcher;
 }
 
-export interface EventStore {
+export interface IEventStore {
   eventMap: AggregateEventMap
 
-  install(): Promise<EventStore>;
+  install(): Promise<IEventStore>;
   load(streamName: string, fromNumber: number, metadataMatcher?: MetadataMatcher): Promise<IEvent[]>;
   mergeAndLoad(streams: Array<LoadStreamParameter>): Promise<IEvent[]>;
   appendTo(streamName: string, events: IEvent[]): Promise<void>;
   createStream(streamName: string): Promise<void>;
   hasStream(streamName: string): Promise<boolean>;
   deleteStream(streamName: string): Promise<void>;
-  createProjectionManager(): ProjectionManager
+  createProjectionManager(): IProjectionManager
   createRepository<T extends IAggregate>(
     streamName: string,
     aggregate: AggregateConstructor<T>,
     aggregateEvents: IEventConstructor[]
   ): Repository<T>
 
-  getProjection<T extends State = any>(name: string): Projection<T>
+  getProjection<T extends State = any>(name: string): IProjection<T>
+  getReadModelProjection<R extends IReadModel, T extends State = any>(name: string): IReadModelProjection<R, T>
 }
 
 export interface AggregateEventMap {
@@ -48,13 +52,6 @@ export interface WriteLockStrategy {
   releaseLock: (name: string) => Promise<void>
 }
 
-export interface RepositoryConfiguration<T> {
-  eventStore: EventStore;
-  aggregate: AggregateConstructor<T>;
-  events: IEventConstructor[];
-  streamName: string;
-}
-
 export interface Repository<T extends IAggregate> {
   save: (aggregate: T) => Promise<void>
   get: (aggregateId: string) => Promise<T>
@@ -62,17 +59,23 @@ export interface Repository<T extends IAggregate> {
 
 export interface Configuration<D extends Driver = Driver.POSTGRES> {
   connectionString: D extends Driver.POSTGRES ? string : never,
-  projections?: ProjectionConstructor<Projection<any>>[],
+  projections?: IProjectionConstructor<IProjection<State>>[],
+  readModelProjections?: ReadModelProjectionConfiguration[],
   aggregates?: AggregateConstructor[],
   middleware?: EventMiddleWare[]
 }
 
-export interface Options {
-  client: Pool;
+export interface ReadModelProjectionConfiguration<R extends IReadModel = IReadModel, T extends State = State> {
+  projection: IReadModelProjectionConstructor<R, T>;
+  readModel: R;
+}
+
+export interface Options<D extends Driver = Driver.POSTGRES> {
+  connectionString: D extends Driver.POSTGRES ? string : never,
   aggregates: AggregateConstructor[];
   middleware: EventMiddleWare[];
-  writeLock: WriteLockStrategy;
-  projections: ProjectionConstructor<Projection<any>>[];
+  projections: IProjectionConstructor<IProjection<State>>[];
+  readModelProjections: ReadModelProjectionConfiguration[];
 }
 
 export interface EventMetadata {
@@ -150,15 +153,13 @@ export interface MetadataMatcher {
   data: MetadataMatch<MetadataOperator>[];
 }
 
-export const createEventStore = ({ connectionString, aggregates, projections, middleware }: Configuration) => {
-  const client = new Pool({ connectionString });
-
+export const createEventStore = ({ connectionString, aggregates, projections, readModelProjections, middleware }: Configuration) => {
   return new PostgresEventStore({
-    client,
-    writeLock: new PostgresWriteLockStrategy(client),
+    connectionString,
     aggregates: aggregates || [],
     middleware: middleware || [],
-    projections: projections || []
+    projections: projections || [],
+    readModelProjections: readModelProjections || []
   });
 };
 

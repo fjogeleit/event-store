@@ -1,9 +1,9 @@
-const BaseProjection = require('../../dist/projection/projection').BaseProjection
+const { Projection } = require('../../dist/projection/projection')
 
 const UserWasRegistered = require('../Model/User/Event/UserWasRegistered')
 const UserNameWasUpdated = require('../Model/User/Event/UserNameWasUpdated')
 
-module.exports = class UserListProjection extends BaseProjection {
+module.exports = class UserListProjection extends Projection {
   static projectionName = 'projection_users';
 
   async run(keepRunning = false) {

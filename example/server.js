@@ -19,8 +19,8 @@ fastify.register((fastify, opts, next) => {
   const commentRepository = eventStore.createRepository('comments', Comment)
 
   eventStore.install()
-    .then(() => console.info('EventStore installed'))
-    .catch((e) => console.error('Error by prepare the EventStore Tables', e))
+    .then(() => console.info(`${eventStore.constructor.name} installed`))
+    .catch((e) => console.error('Error by prepare the IEventStore Tables', e))
 
   const projectionManager = eventStore.createProjectionManager();
 
@@ -65,7 +65,7 @@ fastify.register((fastify, opts, next) => {
       const user = await userRepository.get(request.params.id);
 
       if (!request.query.name) {
-        throw new Error('Query Parameter name required');
+        throw new Error('IQuery Parameter name required');
       }
 
       user.changeUsername(request.query.name);
@@ -95,7 +95,7 @@ fastify.register((fastify, opts, next) => {
       }
 
       if (!request.query.message) {
-        throw new Error('Query Parameter message required');
+        throw new Error('IQuery Parameter message required');
       }
 
       const comment = Comment.write(uuid(), request.params.id, request.query.message)

@@ -18,10 +18,12 @@ export interface Stream {
   matcher?: MetadataMatcher;
 }
 
-export interface ProjectionManager {
-  createProjector(name: string): Projector;
+export interface IProjectionManager {
+  createProjector<T>(name: string): IProjector<T>;
 
-  createQuery(): Query;
+  createReadModelProjector<R extends IReadModel, T extends State = State>(name: string, readModel: R): IReadModelProjector<R, T>;
+
+  createQuery(): IQuery;
 
   deleteProjection(name: string, deleteEmittedEvents?: boolean): Promise<void>;
 
@@ -35,27 +37,29 @@ export interface ProjectionManager {
 
   fetchProjectionStreamPositions(name: string): Promise<{ [streamName: string]: number}>;
 
+  fetchAllProjectionNames(): Promise<string[]>
+
   fetchProjectionState(name: string): Promise<object>;
 }
 
-export interface Projector {
-  init(callback: Function): Projector;
+export interface IProjector<T extends State = State> {
+  init(callback: Function): IProjector<T>;
 
-  fromStream(stream: Stream): Projector;
+  fromStream(stream: Stream): IProjector<T>;
 
-  fromStreams(...streams: Stream[]): Projector;
+  fromStreams(...streams: Stream[]): IProjector<T>;
 
-  fromAll(): Projector;
+  fromAll(): IProjector<T>;
 
-  when(handlers: { [event: string]: <T extends State>(state: T, event: IEvent) => T }): Projector;
+  when(handlers: { [event: string]: (state: T, event: IEvent) => T }): IProjector<T>;
 
-  whenAny(handler: <T extends State>(state: T, event: IEvent) => T): Projector;
+  whenAny(handler: (state: T, event: IEvent) => T): IProjector<T>;
 
   reset(): Promise<void>;
 
   stop(): Promise<void>;
 
-  getState(): State;
+  getState(): T;
 
   getName(): string;
 
@@ -68,18 +72,50 @@ export interface Projector {
   run(keepRunning: boolean): Promise<void>;
 }
 
-export interface Query {
-  init(callback: Function): Query;
+export interface IReadModelProjector<R extends IReadModel, T extends State = State> {
+  readModel: R;
 
-  fromStream(stream: Stream): Query;
+  init(callback: Function): IReadModelProjector<R, T>;
 
-  fromStreams(...streams: Stream[]): Query;
+  fromStream(stream: Stream): IReadModelProjector<R, T>;
 
-  fromAll(): Query;
+  fromStreams(...streams: Stream[]): IReadModelProjector<R, T>;
 
-  when(handlers: { [event: string]: <T extends State>(state: T, event: IEvent) => T }): Query;
+  fromAll(): IReadModelProjector<R, T>;
 
-  whenAny(handler: <T extends State>(state: T, event: IEvent) => T): Query;
+  when(handlers: { [event: string]: (state: T, event: IEvent) => T }): IReadModelProjector<R, T>;
+
+  whenAny(handler: (state: T, event: IEvent) => T): IReadModelProjector<R, T>;
+
+  reset(): Promise<void>;
+
+  stop(): Promise<void>;
+
+  getState(): T;
+
+  getName(): string;
+
+  emit(event: IEvent): Promise<void>;
+
+  linkTo(streamName: string, event: IEvent): Promise<void>;
+
+  delete(deleteEmittedEvents: boolean): Promise<void>;
+
+  run(keepRunning: boolean): Promise<void>;
+}
+
+export interface IQuery {
+  init(callback: Function): IQuery;
+
+  fromStream(stream: Stream): IQuery;
+
+  fromStreams(...streams: Stream[]): IQuery;
+
+  fromAll(): IQuery;
+
+  when(handlers: { [event: string]: <T extends State>(state: T, event: IEvent) => T }): IQuery;
+
+  whenAny(handler: <T extends State>(state: T, event: IEvent) => T): IQuery;
 
   reset(): Promise<void>;
 
@@ -90,15 +126,39 @@ export interface Query {
   run(): Promise<void>;
 }
 
-export interface ProjectionConstructor<T extends Projection<any>> {
-  new(projectorManager: ProjectionManager): T
+export interface IProjectionConstructor<T extends State> {
+  new<T>(projectorManager: IProjectionManager): IProjection<T>
   projectionName: string;
 }
 
-export interface Projection<T extends State> {
+export interface IProjection<T extends State> {
   projectionName: string;
 
   run(keepRunning: boolean): Promise<T>;
   reset(): Promise<void>;
   delete(deleteEmittedEvents: boolean): Promise<void>;
+}
+
+export interface IReadModelProjectionConstructor<R, T> {
+  new<R extends IReadModel, T extends State = State>(projectorManager: IProjectionManager, readModel: IReadModel): IReadModelProjection<R, T>
+  projectionName: string;
+}
+
+export interface IReadModelProjection<R extends IReadModel, T extends State> {
+  projectionName: string;
+  readModel: R;
+
+  run(keepRunning: boolean): Promise<T>;
+  reset(): Promise<void>;
+  delete(deleteProjection: boolean): Promise<void>;
+}
+
+export interface IReadModel {
+  init(): Promise<void>;
+  isInitialized(): Promise<boolean>;
+  reset(): Promise<void>;
+  delete(): Promise<void>;
+
+  stack(method: string, ...args: any[]): void;
+  persist(): Promise<void>;
 }

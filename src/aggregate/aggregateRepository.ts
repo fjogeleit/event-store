@@ -1,6 +1,6 @@
 import {
   BaseEvent,
-  EventStore,
+  IEventStore,
   FieldType, IEvent,
   IEventConstructor,
   MetadataMatcher,
@@ -15,7 +15,7 @@ interface EventMap {
 
 export class AggregateRepository<T extends IAggregate> implements Repository<T> {
   private readonly eventMap: EventMap;
-  private readonly eventStore: EventStore;
+  private readonly eventStore: IEventStore;
 
   constructor(private readonly options: RepositoryConfiguration<T>) {
     this.eventStore = options.eventStore;
@@ -45,11 +45,11 @@ export class AggregateRepository<T extends IAggregate> implements Repository<T> 
 
     const events = await this.eventStore.load(this.options.streamName, 0, matcher);
 
-    if (events.length === 0) {
-      throw new Error('IAggregate not Found')
-    }
-
     let aggregate: T = new this.options.aggregate();
+
+    if (events.length === 0) {
+      throw new Error(`${aggregate.constructor.name} not found`)
+    }
 
     aggregate.fromHistory(events.map<IEvent>(event => {
       const EventConstructor = this.eventMap[event.name] || BaseEvent;

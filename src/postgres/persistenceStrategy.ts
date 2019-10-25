@@ -2,15 +2,17 @@ import { Pool } from "pg";
 import * as format from "pg-format";
 
 import {
-  Configuration,
   EVENT_STREAMS_TABLE,
   FieldType,
   IEvent, IEventConstructor, LoadStreamParameter,
   MetadataMatcher,
-  MetadataOperator, Options, PROJECTIONS_TABLE
+  MetadataOperator, Options, PROJECTIONS_TABLE, WriteLockStrategy
 } from "../index";
 
 import { BaseEvent } from "../event";
+import { createPostgresClient } from "../helper/postgres";
+import { PostgresWriteLockStrategy } from "./writeLockStrategy";
+import { PersistenceStrategy } from "../eventStore";
 
 const sha1 = require("sha1");
 
@@ -18,12 +20,14 @@ export const generateTable = (streamName: string): string => {
   return `_${sha1(streamName)}`;
 };
 
-export class PostgresPersistenceStrategy {
+export class PostgresPersistenceStrategy implements PersistenceStrategy{
   private readonly client: Pool;
   private readonly eventMap: { [aggregateEvent: string]: IEventConstructor };
+  private readonly writeLock: WriteLockStrategy;
 
   constructor(private readonly options: Options) {
-    this.client = options.client;
+    this.client = createPostgresClient(options.connectionString);
+    this.writeLock = new PostgresWriteLockStrategy(this.client);
 
     this.eventMap = this.options.aggregates.reduce((eventMap, aggregate) => {
       const items = aggregate.registeredEvents.reduce<{ [aggregateEvent: string]: IEventConstructor }>((item, event) => {
@@ -106,7 +110,7 @@ export class PostgresPersistenceStrategy {
   };
 
   public async removeStreamFromStreamsTable(streamName: string) {
-    return this.client.query(`DELETE FROM ${EVENT_STREAMS_TABLE} WHERE real_stream_name = $1`, [streamName]);
+    await this.client.query(`DELETE FROM ${EVENT_STREAMS_TABLE} WHERE real_stream_name = $1`, [streamName]);
   };
 
   public async hasStream(streamName: string) {
@@ -146,10 +150,10 @@ export class PostgresPersistenceStrategy {
   public async dropSchema(streamName: string) {
     const tableName = generateTable(streamName);
 
-    return this.client.query(`DROP TABLE IF EXISTS ${tableName};`);
+    await this.client.query(`DROP TABLE IF EXISTS ${tableName};`);
   };
 
-  public async appendTo(streamName: string, events: IEvent[]) {
+  public async appendTo<T = object>(streamName: string, events: IEvent<T>[]) {
     const tableName = generateTable(streamName);
 
     const data = events.map((event) => [
@@ -162,7 +166,7 @@ export class PostgresPersistenceStrategy {
 
     const lock = `${tableName}_write_lock`;
 
-    await this.options.writeLock.createLock(lock);
+    await this.writeLock.createLock(lock);
 
     try {
       await this.client.query(format(`INSERT INTO ${ tableName } (event_id, event_name, payload, metadata, created_at) VALUES %L`, data))
@@ -177,7 +181,7 @@ export class PostgresPersistenceStrategy {
 
       throw error;
     } finally {
-      await this.options.writeLock.releaseLock(lock);
+      await this.writeLock.releaseLock(lock);
     }
   }
 

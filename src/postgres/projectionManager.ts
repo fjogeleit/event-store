@@ -1,21 +1,36 @@
 import { Pool } from "pg";
-import { EventStore, PROJECTIONS_TABLE } from "../index";
-import { ProjectionManager, ProjectionStatus, Projector, Query } from "../projection/types";
+import { EVENT_STREAMS_TABLE, IEventStore, PROJECTIONS_TABLE } from "../index";
+import {
+  IProjectionManager,
+  ProjectionStatus,
+  IProjector,
+  IQuery,
+  State,
+  IReadModel,
+  IReadModelProjector
+} from "../projection/types";
 import { PostgresProjector } from "./projector";
-import { PostgresQuery } from "./query";
+import { Query } from "../projection/query";
+import { createPostgresClient } from "../helper/postgres";
+import { PostgresReadModelProjector } from "./readModelProjector";
 
-export class PostgresProjectionManager implements ProjectionManager {
-  constructor(
-    private readonly client: Pool,
-    private readonly eventStore: EventStore
-  ) {}
+export class PostgresProjectionManager implements IProjectionManager {
+  private readonly client: Pool;
 
-  createProjector(name: string): Projector {
+  constructor(readonly connectionString: string, private readonly eventStore: IEventStore) {
+    this.client = createPostgresClient(this.connectionString);
+  }
+
+  createProjector<T extends State = State>(name: string): IProjector<T> {
     return new PostgresProjector(name, this, this.eventStore, this.client)
   }
 
-  createQuery(): Query {
-    return new PostgresQuery(this, this.eventStore, this.client)
+  createReadModelProjector<R extends IReadModel, T extends State = State>(name: string, readModel: R): IReadModelProjector<R, T> {
+    return new PostgresReadModelProjector<R, T>(name, this, this.eventStore, this.client, readModel)
+  }
+
+  createQuery(): IQuery {
+    return new Query(this, this.eventStore)
   }
 
   async fetchProjectionState(name: string): Promise<object> {
@@ -28,6 +43,12 @@ export class PostgresProjectionManager implements ProjectionManager {
 
   async fetchProjectionStreamPositions(name: string): Promise<{ [streamName: string]: number}> {
     return this._selectProjectionProperty<{ [streamName: string]: number}>(name, 'position');
+  }
+
+  async fetchAllProjectionNames(): Promise<string[]> {
+    return  await this.client
+      .query<{ real_stream_name: string }>(`SELECT real_stream_name FROM ${ EVENT_STREAMS_TABLE } WHERE real_stream_name NOT LIKE '$%'`)
+      .then(result => result.rows.map(row => row.real_stream_name));
   }
 
   async deleteProjection(name: string, deleteEmittedEvents: boolean = false): Promise<void> {
