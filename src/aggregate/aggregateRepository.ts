@@ -54,7 +54,7 @@ export class AggregateRepository<T extends IAggregate> implements Repository<T> 
     aggregate.fromHistory(events.map<IEvent>(event => {
       const EventConstructor = this.eventMap[event.name] || BaseEvent;
 
-      return new EventConstructor(event.name, event.payload, event.metadata, event.uuid, event.createdAt);
+      return new EventConstructor(event.name, event.payload, event.metadata, event.uuid, event.createdAt.microtime);
     }));
 
     return aggregate;

@@ -7,17 +7,20 @@ import {
 } from "./projection/types";
 import { IAggregate } from "./aggregate/types";
 import { PostgresEventStore } from "./postgres/eventStore";
+import { InMemoryEventStore } from "./inMemory/eventStore";
+import { IDateTime } from "./helper/dateTime";
 
 export const EVENT_STREAMS_TABLE = 'event_streams';
 export const PROJECTIONS_TABLE = 'projections';
 
 export enum Driver {
-  POSTGRES = 'postgres'
+  POSTGRES = 'postgres',
+  IN_MEMORY = 'in_memory'
 }
 
 export interface LoadStreamParameter {
   streamName: string;
-  fromNumber: number
+  fromNumber?: number
   count?: number;
   matcher?: MetadataMatcher;
 }
@@ -27,7 +30,7 @@ export interface IEventStore {
 
   install(): Promise<IEventStore>;
   load(streamName: string, fromNumber: number, metadataMatcher?: MetadataMatcher): Promise<IEvent[]>;
-  mergeAndLoad(streams: Array<LoadStreamParameter>): Promise<IEvent[]>;
+  mergeAndLoad(...streams: Array<LoadStreamParameter>): Promise<IEvent[]>;
   appendTo(streamName: string, events: IEvent[]): Promise<void>;
   createStream(streamName: string): Promise<void>;
   hasStream(streamName: string): Promise<boolean>;
@@ -35,7 +38,7 @@ export interface IEventStore {
   createProjectionManager(): IProjectionManager
   createRepository<T extends IAggregate>(
     streamName: string,
-    aggregate: AggregateConstructor<T>,
+    aggregate: IAggregateConstructor<T>,
     aggregateEvents: IEventConstructor[]
   ): Repository<T>
 
@@ -44,7 +47,7 @@ export interface IEventStore {
 }
 
 export interface AggregateEventMap {
-  [aggregate: string]: AggregateConstructor;
+  [aggregate: string]: IAggregateConstructor;
 }
 
 export interface WriteLockStrategy {
@@ -57,12 +60,13 @@ export interface Repository<T extends IAggregate> {
   get: (aggregateId: string) => Promise<T>
 }
 
-export interface Configuration<D extends Driver = Driver.POSTGRES> {
-  connectionString: D extends Driver.POSTGRES ? string : never,
-  projections?: IProjectionConstructor<IProjection<State>>[],
+export interface Configuration {
+  connectionString: string,
+  projections?: IProjectionConstructor<any>[],
   readModelProjections?: ReadModelProjectionConfiguration[],
-  aggregates?: AggregateConstructor[],
+  aggregates?: IAggregateConstructor[],
   middleware?: EventMiddleWare[]
+  driver: Driver
 }
 
 export interface ReadModelProjectionConfiguration<R extends IReadModel = IReadModel, T extends State = State> {
@@ -72,7 +76,7 @@ export interface ReadModelProjectionConfiguration<R extends IReadModel = IReadMo
 
 export interface Options<D extends Driver = Driver.POSTGRES> {
   connectionString: D extends Driver.POSTGRES ? string : never,
-  aggregates: AggregateConstructor[];
+  aggregates: IAggregateConstructor[];
   middleware: EventMiddleWare[];
   projections: IProjectionConstructor<IProjection<State>>[];
   readModelProjections: ReadModelProjectionConfiguration[];
@@ -91,11 +95,11 @@ export interface IEventConstructor<T = object> {
     _payload: T,
     _metadata: EventMetadata,
     _uuid?: string,
-    _createdAt?: Date
+    microtime?: number
   ): IEvent;
 }
 
-export interface AggregateConstructor<T = object> {
+export interface IAggregateConstructor<T = object> {
   new (): T;
   registeredEvents: IEventConstructor[];
 }
@@ -105,7 +109,7 @@ export interface IEvent<T = object> {
   name: string;
   payload: T;
   metadata: EventMetadata;
-  createdAt: Date
+  createdAt: IDateTime;
 
   withVersion(version: number): IEvent<T>
   withAggregateType(type: string): IEvent<T>
@@ -153,7 +157,17 @@ export interface MetadataMatcher {
   data: MetadataMatch<MetadataOperator>[];
 }
 
-export const createEventStore = ({ connectionString, aggregates, projections, readModelProjections, middleware }: Configuration) => {
+export const createEventStore = ({ connectionString, aggregates, projections, readModelProjections, middleware, driver }: Configuration) => {
+  if (driver === Driver.IN_MEMORY) {
+    return new InMemoryEventStore({
+      connectionString: null,
+      aggregates: aggregates || [],
+      middleware: middleware || [],
+      projections: projections || [],
+      readModelProjections: readModelProjections || []
+    });
+  }
+
   return new PostgresEventStore({
     connectionString,
     aggregates: aggregates || [],

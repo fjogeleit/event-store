@@ -1,4 +1,4 @@
-import { Pool } from "pg";
+import { Pool, types } from "pg";
 import * as format from "pg-format";
 
 import {
@@ -18,6 +18,20 @@ const sha1 = require("sha1");
 
 export const generateTable = (streamName: string): string => {
   return `_${sha1(streamName)}`;
+};
+
+const getTypeParser = (type, format) => {
+    if (type === types.builtins.TIMESTAMP) {
+        return (value) => {
+        const date = new Date(value);
+
+        const timeZone = -1 * date.getTimezoneOffset() * 60 * 1000;
+
+        return ((date.getTime() + timeZone) * 1000) + Number.parseInt(value.substring(-6));
+      }
+    }
+
+  return types.getTypeParser(type, format)
 };
 
 export class PostgresPersistenceStrategy implements PersistenceStrategy{
@@ -161,7 +175,7 @@ export class PostgresPersistenceStrategy implements PersistenceStrategy{
       event.name,
       JSON.stringify(event.payload),
       JSON.stringify(event.metadata),
-      event.createdAt,
+      event.createdAt.toString(),
     ]);
 
     const lock = `${tableName}_write_lock`;
@@ -188,9 +202,14 @@ export class PostgresPersistenceStrategy implements PersistenceStrategy{
   public async load(streamName: string, fromNumber: number, count?: number, matcher?: MetadataMatcher) {
     const { query, values } = await this.createQuery(streamName, fromNumber, matcher);
 
-    const { rows } = await this.client.query(query, values);
+    const { rows } = await this.client.query({
+      text: query,
+      values,
+      // @ts-ignore
+      types: { getTypeParser }
+    });
 
-    return rows.map<IEvent>(({ event_id, payload, event_name, metadata, created_at }: any) => {
+    return rows.map<IEvent>(({ event_id, payload, event_name, metadata, created_at }) => {
       const EventConstructor = this.eventMap[`${metadata._aggregate_type}:${event_name}`] || BaseEvent;
 
       return (new EventConstructor(
@@ -198,7 +217,7 @@ export class PostgresPersistenceStrategy implements PersistenceStrategy{
         payload,
         metadata,
         event_id,
-        new Date(created_at)
+        created_at
       ));
     });
   }
@@ -208,7 +227,7 @@ export class PostgresPersistenceStrategy implements PersistenceStrategy{
     let queries = [];
     let parameters = [];
 
-    for (const { streamName, fromNumber, matcher } of streams) {
+    for (const { streamName, fromNumber = 1, matcher } of streams) {
       const { query, values } = await this.createQuery(streamName, fromNumber, matcher, paramCounter);
 
       paramCounter += values.length;
@@ -225,7 +244,12 @@ export class PostgresPersistenceStrategy implements PersistenceStrategy{
 
     const params = parameters.reduce<Array<any>>((params, values) => [...params, ...values], []);
 
-    const { rows } = await this.client.query(query, params);
+    const { rows } = await this.client.query({
+      text: query,
+      values: params,
+      // @ts-ignore
+      types: { getTypeParser }
+    });
 
     return rows.map<IEvent>(({ event_id, payload, event_name, metadata, created_at, stream }: any) => {
       const EventConstructor = this.eventMap[`${metadata._aggregate_type}:${event_name}`] || BaseEvent;
@@ -235,7 +259,7 @@ export class PostgresPersistenceStrategy implements PersistenceStrategy{
         payload,
         { ...metadata, stream },
         event_id,
-        new Date(created_at)
+        created_at
       ));
     });
   }

@@ -1,5 +1,5 @@
 import {
-  AggregateConstructor,
+  IAggregateConstructor,
   AggregateEventMap,
   Options,
   EventAction,
@@ -110,10 +110,10 @@ export abstract class EventStore implements IEventStore
 
   public async load(
     streamName: string,
-    fromNumber: number = 0,
+    fromNumber: number = 1,
     metadataMatcher?: MetadataMatcher
   ): Promise<IEvent[]> {
-    const events = await this.persistenceStrategy.load(streamName, fromNumber, 0, metadataMatcher);
+    const events = await this.persistenceStrategy.load(streamName, fromNumber, undefined, metadataMatcher);
 
     return events.map(event => {
       return this.middleware[EventAction.LOADED].reduce<IEvent>((event, handler) => {
@@ -122,7 +122,7 @@ export abstract class EventStore implements IEventStore
     });
   }
 
-  public async mergeAndLoad(streams: LoadStreamParameter[]) {
+  public async mergeAndLoad(...streams: LoadStreamParameter[]) {
     const events = await this.persistenceStrategy.mergeAndLoad(streams);
 
     return events.map(event => {
@@ -142,7 +142,7 @@ export abstract class EventStore implements IEventStore
 
   public createRepository<T extends IAggregate>(
     streamName: string,
-    aggregate: AggregateConstructor<T>
+    aggregate: IAggregateConstructor<T>
   ) {
     return new AggregateRepository<T>({
       eventStore: this,
@@ -160,7 +160,7 @@ export abstract class EventStore implements IEventStore
       throw new Error(`A Projection with name ${name} does not exists`);
     }
 
-    return new (Projection as IProjectionConstructor<T>)(this.createProjectionManager())
+    return new (Projection as any)(this.createProjectionManager())
   }
 
   public getReadModelProjection<R extends IReadModel, T extends State = any>(name: string): IReadModelProjection<R, T> {
@@ -170,6 +170,6 @@ export abstract class EventStore implements IEventStore
       throw new Error(`A Projection with name ${name} does not exists`);
     }
 
-    return new ReadModelProjection<R, T>(this.createProjectionManager(), readModel);
+    return new (ReadModelProjection as any)(this.createProjectionManager(), readModel);
   }
 }

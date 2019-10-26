@@ -1,16 +1,14 @@
 import { IProjection, IProjectionConstructor, IProjectionManager, IProjector, State } from "./types";
 
-export abstract class Projection<T extends State> implements IProjection<T> {
-  private _projector: IProjector;
+export abstract class Projection<T extends State = State> implements IProjection<T> {
+  private _projector: IProjector<T>;
 
-  protected constructor(protected readonly projectionManager: IProjectionManager) {}
-
-  public abstract projectionName: string;
-  public abstract run(keepRunning: boolean): Promise<T>;
+  public constructor(protected readonly projectionManager: IProjectionManager) {}
+  public abstract run(keepRunning: boolean): Promise<any>;
 
   protected get projector() {
     if (!this._projector) {
-      this._projector = this.projectionManager.createProjector(
+      this._projector = this.projectionManager.createProjector<T>(
         (this.constructor as IProjectionConstructor<Projection<T>>).projectionName
       );
     }
@@ -24,5 +22,9 @@ export abstract class Projection<T extends State> implements IProjection<T> {
 
   async delete(deleteEmittedEvents: boolean) {
     return this.projector.delete(deleteEmittedEvents);
+  }
+
+  getState(): T {
+    return this.projector.getState();
   }
 }

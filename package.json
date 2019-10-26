@@ -6,7 +6,7 @@
   "license": "MIT",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "jest",
     "serve": "nodemon -w ./dist -w ./example example/server.js",
     "build": "tsc -p tsconfig.json",
     "watch": "tsc -p tsconfig.json --watch",
@@ -45,6 +45,7 @@
     "figlet": "^1.2.4",
     "kleur": "^3.0.3",
     "lodash.clonedeep": "^4.5.0",
+    "microtime": "^3.0.0",
     "pg": "^7.12.1",
     "pg-format": "^1.0.4",
     "reflect-metadata": "^0.1.13",

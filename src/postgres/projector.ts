@@ -80,7 +80,7 @@ export class PostgresProjector<T extends State = State> implements IProjector<T>
     return this;
   }
 
-  when(handlers: { [p: string]: <R extends IEvent>(state: T, event: R) => T }): IProjector<T> {
+  when(handlers: { [p: string]: (state: T, event: IEvent) => T }): IProjector<T> {
     if (this.handler || this.handlers) {
       throw new Error('When was already called')
     }
@@ -92,7 +92,7 @@ export class PostgresProjector<T extends State = State> implements IProjector<T>
     return this;
   }
 
-  whenAny(handler: <R extends IEvent>(state: T, event: R) => T): IProjector<T> {
+  whenAny(handler: (state: T, event: IEvent) => T): IProjector<T> {
     if (this.handler || this.handlers) {
       throw new Error('When was already called')
     }
@@ -235,7 +235,7 @@ export class PostgresProjector<T extends State = State> implements IProjector<T>
 
     try {
       do {
-        const evenStream = await this.eventStore.mergeAndLoad(Object.entries(this.streamPositions).map(([streamName, position]) => ({
+        const evenStream = await this.eventStore.mergeAndLoad(...Object.entries(this.streamPositions).map(([streamName, position]) => ({
           streamName,
           fromNumber: position + 1,
           matcher: this.metadataMatchers[streamName]

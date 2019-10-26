@@ -70,7 +70,7 @@ export class Query<T extends State> implements IQuery {
     return this;
   }
 
-  when(handlers: { [p: string]: <T extends State>(state: T, event: IEvent) => T }): IQuery {
+  when(handlers: { [p: string]: (state: T, event: IEvent) => T }): IQuery {
     if (this.handler || this.handlers) {
       throw new Error('When was already called')
     }
@@ -82,7 +82,7 @@ export class Query<T extends State> implements IQuery {
     return this;
   }
 
-  whenAny(handler: <T extends State>(state: T, event: IEvent) => T): IQuery {
+  whenAny(handler: (state: T, event: IEvent) => T): IQuery {
     if (this.handler || this.handlers) {
       throw new Error('When was already called')
     }
@@ -126,7 +126,7 @@ export class Query<T extends State> implements IQuery {
     await this.prepareStreamPosition();
 
     try {
-        const evenStream = await this.eventStore.mergeAndLoad(Object.entries(this.streamPositions).map(([streamName, position]) => ({
+        const evenStream = await this.eventStore.mergeAndLoad(...Object.entries(this.streamPositions).map(([streamName, position]) => ({
           streamName,
           fromNumber: position + 1,
           matcher: this.metadataMatchers[streamName]

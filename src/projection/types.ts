@@ -9,9 +9,7 @@ export enum ProjectionStatus {
   RESETTING = 'resetting',
 }
 
-export interface State {
-  [key: string]: any
-}
+export interface State {}
 
 export interface Stream {
   streamName: string;
@@ -126,21 +124,20 @@ export interface IQuery {
   run(): Promise<void>;
 }
 
-export interface IProjectionConstructor<T extends State> {
-  new<T>(projectorManager: IProjectionManager): IProjection<T>
+export interface IProjectionConstructor<T extends State = State> {
+  new(projectorManager: IProjectionManager): IProjection<T>
   projectionName: string;
 }
 
 export interface IProjection<T extends State> {
-  projectionName: string;
-
-  run(keepRunning: boolean): Promise<T>;
+  run(keepRunning: boolean): Promise<any>;
   reset(): Promise<void>;
+  getState(): T;
   delete(deleteEmittedEvents: boolean): Promise<void>;
 }
 
-export interface IReadModelProjectionConstructor<R, T> {
-  new<R extends IReadModel, T extends State = State>(projectorManager: IProjectionManager, readModel: IReadModel): IReadModelProjection<R, T>
+export interface IReadModelProjectionConstructor<R extends IReadModel, T extends State> {
+  new(projectorManager: IProjectionManager, readModel: IReadModel): IReadModelProjection<R, T>
   projectionName: string;
 }
 

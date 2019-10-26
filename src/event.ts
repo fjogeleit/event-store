@@ -1,5 +1,8 @@
 import { EventMetadata, IEvent } from "./index";
 import * as uuid from 'uuid/v4';
+import { DateTime, IDateTime } from "./helper/dateTime";
+
+const microtime = require('microtime');
 
 export class BaseEvent<T = object> implements IEvent<T> {
   public constructor(
@@ -7,7 +10,7 @@ export class BaseEvent<T = object> implements IEvent<T> {
     protected readonly _payload: T,
     protected readonly _metadata: EventMetadata,
     protected readonly _uuid: string = uuid(),
-    protected readonly _createdAt: Date = (new Date())
+    protected readonly _microtime: number = microtime.now(),
   ) {
   }
 
@@ -27,8 +30,8 @@ export class BaseEvent<T = object> implements IEvent<T> {
     return this._payload;
   }
 
-  get createdAt() {
-    return this._createdAt;
+  get createdAt(): IDateTime {
+    return new DateTime(this._microtime);
   }
 
   get aggregateId() {
@@ -40,32 +43,32 @@ export class BaseEvent<T = object> implements IEvent<T> {
   }
 
   public withVersion(version: number): IEvent<T> {
-    return new (this.constructor as any)(this._eventName, this._payload, { ...this._metadata, _aggregate_version: version }, this._uuid, this._createdAt);
+    return new (this.constructor as any)(this._eventName, this._payload, { ...this._metadata, _aggregate_version: version }, this._uuid, this._microtime);
   }
 
   public withAggregateType(type: string): IEvent<T> {
-    return new (this.constructor as any)(this._eventName, this._payload, { ...this._metadata, _aggregate_type: type }, this._uuid, this._createdAt);
+    return new (this.constructor as any)(this._eventName, this._payload, { ...this._metadata, _aggregate_type: type }, this._uuid, this._microtime);
   }
 
   public withMetadata(metadata: EventMetadata): IEvent<T> {
-    return new (this.constructor as any)(this._eventName, this._payload, metadata, this._uuid, this._createdAt);
+    return new (this.constructor as any)(this._eventName, this._payload, metadata, this._uuid, this._microtime);
   }
 
   public withAddedMetadata(key: string, value: string): IEvent<T> {
-    return new (this.constructor as any)(this._eventName, this._payload, { ...this._metadata, [key]: value }, this._uuid, this._createdAt);
+    return new (this.constructor as any)(this._eventName, this._payload, { ...this._metadata, [key]: value }, this._uuid, this._microtime);
   }
 
   public static occur(
     _aggregateId: string,
     _payload: object,
     _uuid: string = uuid(),
-    _createdAt: Date = (new Date())
+    _microtime: number = microtime.now()
   ) {
     return new (this as any)(
       this.name, _payload,
       { _aggregate_id: _aggregateId, _aggregate_type: '', _aggregate_version: 1 },
       _uuid,
-      _createdAt
+      _microtime
     );
   }
 }

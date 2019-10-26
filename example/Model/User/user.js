@@ -18,6 +18,8 @@ module.exports = class User extends Aggregate {
 
   changeUsername(username) {
     this._recordThat(UserNameWasUpdated.with(this.userId, { username }))
+
+    return this;
   }
 
   _whenUserWasRegistered(event) {
