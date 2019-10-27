@@ -3,12 +3,11 @@ import {
   IEvent,
   IEventConstructor,
   LoadStreamParameter,
-  MetadataMatcher,
+  IMetadataMatcher,
   MetadataOperator,
   Options
-} from "../index";
+} from "../types";
 
-import { BaseEvent } from "../event";
 import { PersistenceStrategy } from "../eventStore";
 
 const cloneDeep = require('lodash.clonedeep');
@@ -19,7 +18,7 @@ export class InMemoryPersistenceStrategy implements PersistenceStrategy {
 
   constructor(private readonly options: Options) {
     this.eventMap = this.options.aggregates.reduce((eventMap, aggregate) => {
-      const items = aggregate.registeredEvents.reduce<{ [aggregateEvent: string]: IEventConstructor }>((item, event) => {
+      const items = aggregate.registeredEvents().reduce<{ [aggregateEvent: string]: IEventConstructor }>((item, event) => {
         item[`${aggregate.name}:${event.name}`] = event;
 
         return item;
@@ -66,7 +65,7 @@ export class InMemoryPersistenceStrategy implements PersistenceStrategy {
     ].sort((a, b) => a.metadata._aggregate_version - b.metadata._aggregate_version)
   }
 
-  public async load(streamName: string, fromNumber: number, count?: number, matcher?: MetadataMatcher) {
+  public async load(streamName: string, fromNumber: number, count?: number, matcher?: IMetadataMatcher) {
     const rows = this.filter(this._eventStreams[streamName].slice(fromNumber - 1, count), matcher);
 
     return cloneDeep(rows);
@@ -109,7 +108,7 @@ export class InMemoryPersistenceStrategy implements PersistenceStrategy {
     }
   }
 
-  private filter(events: IEvent[], matcher?: MetadataMatcher) {
+  private filter(events: IEvent[], matcher?: IMetadataMatcher) {
     if (!matcher) return events;
 
     matcher.data.forEach((match) => {

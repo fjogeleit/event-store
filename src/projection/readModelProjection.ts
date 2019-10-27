@@ -1,17 +1,18 @@
 import {
   IProjectionManager,
-  IProjector, IReadModel,
+  IProjector,
+  IReadModel,
   IReadModelProjection,
   IReadModelProjectionConstructor,
-  State
+  IState
 } from "./types";
 
-export abstract class ReadModelProjection<R extends IReadModel, T extends State> implements IReadModelProjection<R, T> {
+export abstract class ReadModelProjection<R extends IReadModel, T extends IState> implements IReadModelProjection<R, T> {
+  public static projectionName = '';
   private _projector: IProjector;
 
-  protected constructor(protected readonly projectionManager: IProjectionManager, public readonly readModel: R) {}
+  public constructor(protected readonly projectionManager: IProjectionManager, public readonly readModel: R) {}
 
-  public abstract projectionName: string;
   public abstract run(keepRunning: boolean): Promise<T>;
 
   protected get projector() {

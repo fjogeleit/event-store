@@ -1,6 +1,5 @@
 import { EventStore } from '../eventStore'
-import { IProjectionManager } from '../projection/types'
-import { IEvent, Options } from "../index";
+import { IProjectionManager, IEvent, Options } from "../types";
 import { InMemoryPersistenceStrategy } from "./persistenceStrategy";
 import { InMemoryProjectionManager } from "./projectionManager";
 

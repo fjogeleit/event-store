@@ -1,9 +1,13 @@
-import { IAggregateConstructor, IEventStore, IEvent, IEventConstructor } from "../index";
+import { IEventStore, IEvent, IEventConstructor } from "../types";
+
+export interface IAggregateConstructor<T = object> {
+  new (): T;
+  registeredEvents(): IEventConstructor[];
+}
 
 export interface IAggregate {
   popEvents: () => IEvent[]
   fromHistory: (events: IEvent[]) => IAggregate
-  registeredEvents: IEventConstructor[]
 }
 
 export interface RepositoryConfiguration<T> {

@@ -1,14 +1,24 @@
-import { IProjectionManager, ProjectionStatus, IQuery, State, Stream } from "./types";
-import { IEventStore, IEvent, MetadataMatcher } from "../index";
+import {
+  IProjectionManager,
+  ProjectionStatus,
+  IQuery,
+  IState,
+  IStream,
+  IEventStore,
+  IEvent,
+  IMetadataMatcher
+} from "../types";
+
+import { ProjectorException } from "../exception";
 
 const cloneDeep = require('lodash.clonedeep');
 
-export class Query<T extends State> implements IQuery {
+export class Query<T extends IState> implements IQuery {
   private state?: T;
   private initHandler?: () => T;
   private handlers?: { [event: string]: (state: T, event: IEvent) => T | Promise<T> };
   private handler?: (state: T, event: IEvent) => T | Promise<T>;
-  private metadataMatchers: { [streamName: string]: MetadataMatcher } = {};
+  private metadataMatchers: { [streamName: string]: IMetadataMatcher } = {};
 
   private isStopped: boolean = false;
   private streamPositions: { [stream: string]: number } = {};
@@ -23,7 +33,7 @@ export class Query<T extends State> implements IQuery {
 
   init(callback: () => T): IQuery {
     if (this.initHandler !== undefined) {
-      throw new Error(`Projection already initialized`)
+      throw ProjectorException.alreadyInitialized();
     }
 
     this.initHandler = callback;
@@ -36,7 +46,7 @@ export class Query<T extends State> implements IQuery {
 
   fromAll(): IQuery {
     if (this.query.all || this.query.streams.length > 0) {
-      throw new Error('From was already called')
+      throw ProjectorException.fromWasAlreadyCalled();
     }
 
     this.query.all = true;
@@ -44,9 +54,9 @@ export class Query<T extends State> implements IQuery {
     return this;
   }
 
-  fromStream(stream: Stream): IQuery {
+  fromStream(stream: IStream): IQuery {
     if (this.query.all || this.query.streams.length > 0) {
-      throw new Error('From was already called')
+      throw ProjectorException.fromWasAlreadyCalled();
     }
 
     this.query.streams.push(stream.streamName);
@@ -55,9 +65,9 @@ export class Query<T extends State> implements IQuery {
     return this;
   }
 
-  fromStreams(...streams: Stream[]): IQuery {
+  fromStreams(...streams: IStream[]): IQuery {
     if (this.query.all || this.query.streams.length > 0) {
-      throw new Error('From was already called')
+      throw ProjectorException.fromWasAlreadyCalled();
     }
 
     this.query.streams = streams.map((stream) => stream.streamName);
@@ -72,7 +82,7 @@ export class Query<T extends State> implements IQuery {
 
   when(handlers: { [p: string]: (state: T, event: IEvent) => T }): IQuery {
     if (this.handler || this.handlers) {
-      throw new Error('When was already called')
+      throw ProjectorException.whenWasAlreadyCalled();
     }
 
     Object.values(handlers).forEach(handler => handler.bind(this));
@@ -84,7 +94,7 @@ export class Query<T extends State> implements IQuery {
 
   whenAny(handler: (state: T, event: IEvent) => T): IQuery {
     if (this.handler || this.handlers) {
-      throw new Error('When was already called')
+      throw ProjectorException.whenWasAlreadyCalled();
     }
 
     handler.bind(this);
@@ -109,17 +119,17 @@ export class Query<T extends State> implements IQuery {
     this.status = ProjectionStatus.IDLE;
   }
 
-  getState(): State {
+  getState(): IState {
     return this.state;
   }
 
   async run(keepRunning: boolean = false): Promise<void> {
     if (!this.handler && !this.handlers) {
-      throw new Error('No handlers configured')
+      throw ProjectorException.noHandler();
     }
 
     if (!this.state) {
-      throw new Error('No State initialised')
+      throw ProjectorException.stateWasNotInitialised();
     }
 
     this.isStopped = false;
@@ -177,15 +187,11 @@ export class Query<T extends State> implements IQuery {
     let streamPositions = {};
 
     if (this.query.all) {
-      try {
-        streamPositions = (await this.manager.fetchAllProjectionNames()).reduce((acc, streamName) => {
-          acc[streamName] = 0;
+      streamPositions = (await this.manager.fetchAllProjectionNames()).reduce((acc, streamName) => {
+        acc[streamName] = 0;
 
-          return acc;
-        }, {});
-      } catch (e) {
-        throw new Error(`Error by stream position prepare ${e.toString()}`)
-      }
+        return acc;
+      }, {});
     }
 
     if (this.query.streams.length > 0) {

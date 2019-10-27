@@ -1,6 +1,7 @@
-import { IProjection, IProjectionConstructor, IProjectionManager, IProjector, State } from "./types";
+import { IProjection, IProjectionConstructor, IProjectionManager, IProjector, IState } from "./types";
 
-export abstract class Projection<T extends State = State> implements IProjection<T> {
+export abstract class Projection<T extends IState = IState> implements IProjection<T> {
+  public static projectionName = '';
   private _projector: IProjector<T>;
 
   public constructor(protected readonly projectionManager: IProjectionManager) {}

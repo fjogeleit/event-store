@@ -1,5 +1,5 @@
 import { Pool } from "pg";
-import { WriteLockStrategy } from "../index";
+import { WriteLockStrategy } from "../types";
 
 export class PostgresWriteLockStrategy implements WriteLockStrategy {
   constructor(private readonly client: Pool) {}

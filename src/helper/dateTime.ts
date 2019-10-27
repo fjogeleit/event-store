@@ -1,15 +1,6 @@
+import { IDateTime } from "./types";
+
 const microtime = require('microtime');
-
-export interface IDateTime {
-  microtime: number;
-  toString(): string;
-  toDate(): Date;
-}
-
-export interface IDateTimeConstructor {
-  new(microtime: number): IDateTime
-  now(): IDateTime
-}
 
 export class DateTime implements IDateTime {
   constructor(private readonly _microtime: number){}

@@ -1,10 +1,10 @@
-import { createEventStore, Driver, IAggregateConstructor, IEvent } from "../index";
+import { Driver, IEvent } from "../types";
+import { createEventStore } from "../index";
 import { InMemoryEventStore } from "./eventStore";
 import { IAggregate } from "../../dist/aggregate/types";
-import { Projection } from "../projection/projection";
-import { IProjection } from "../projection/types";
+import { Projection } from "../projection";
+import { IProjection, IAggregateConstructor, Repository } from "../types";
 import * as uuid from "uuid/v4";
-import { Repository } from "../aggregate/types";
 
 
 interface IUser extends IAggregate {

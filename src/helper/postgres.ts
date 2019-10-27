@@ -1,4 +1,4 @@
-import { Client, Identifiers, Values } from "./index";
+import { Client, Identifiers, Values } from "./types";
 import { Pool } from "pg";
 const format = require('pg-format');
 

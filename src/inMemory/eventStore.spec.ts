@@ -1,8 +1,17 @@
-import { createEventStore, Driver, FieldType, IAggregateConstructor, IEvent, MetadataOperator } from "../index";
+import {
+  Driver,
+  FieldType,
+  IEvent,
+  MetadataOperator,
+  IAggregateConstructor,
+  IAggregate,
+  IProjectionConstructor,
+  IState
+} from "../types";
+
+import { createEventStore } from "../index";
 import { InMemoryEventStore } from "./eventStore";
-import { IProjectionConstructor, State } from "../projection/types";
 import * as uuid from 'uuid/v4';
-import { IAggregate } from "../../dist/aggregate/types";
 
 
 interface IUser extends IAggregate {
@@ -29,7 +38,7 @@ interface ICommentConstructor extends IAggregateConstructor<IComment> {
 
 const User: IUserConstructor = require('../../example/Model/User/user');
 const Comment: ICommentConstructor = require('../../example/Model/Comment/comment');
-const UserListProjection: IProjectionConstructor<State> = require('../../example/Projection/userList');
+const UserListProjection: IProjectionConstructor<IState> = require('../../example/Projection/userList');
 
 describe('inMemory/eventStore', () => {
   let eventStore: InMemoryEventStore = null;

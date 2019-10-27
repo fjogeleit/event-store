@@ -1,5 +1,6 @@
-import { IAggregate } from "./types";
-import { IEvent, IEventConstructor } from "../index";
+import 'reflect-metadata';
+import { IEvent, IAggregate } from "../types";
+import { AGGREGATE_CONFIG } from "../decorator/constants";
 
 export abstract class Aggregate implements IAggregate {
   protected _recordedEvents: IEvent[] = [];
@@ -43,5 +44,7 @@ export abstract class Aggregate implements IAggregate {
     }, this)
   }
 
-  public abstract registeredEvents: IEventConstructor[];
+  static registeredEvents() {
+    return Reflect.getMetadata(AGGREGATE_CONFIG, this) || [];
+  }
 }

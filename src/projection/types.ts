@@ -1,4 +1,4 @@
-import { IEvent, MetadataMatcher } from "../index";
+import { IEvent, IMetadataMatcher } from "../types";
 
 export enum ProjectionStatus {
   IDLE = 'idle',
@@ -9,17 +9,17 @@ export enum ProjectionStatus {
   RESETTING = 'resetting',
 }
 
-export interface State {}
+export interface IState {}
 
-export interface Stream {
+export interface IStream {
   streamName: string;
-  matcher?: MetadataMatcher;
+  matcher?: IMetadataMatcher;
 }
 
 export interface IProjectionManager {
   createProjector<T>(name: string): IProjector<T>;
 
-  createReadModelProjector<R extends IReadModel, T extends State = State>(name: string, readModel: R): IReadModelProjector<R, T>;
+  createReadModelProjector<R extends IReadModel, T extends IState = IState>(name: string, readModel: R): IReadModelProjector<R, T>;
 
   createQuery(): IQuery;
 
@@ -40,12 +40,12 @@ export interface IProjectionManager {
   fetchProjectionState(name: string): Promise<object>;
 }
 
-export interface IProjector<T extends State = State> {
+export interface IProjector<T extends IState = IState> {
   init(callback: Function): IProjector<T>;
 
-  fromStream(stream: Stream): IProjector<T>;
+  fromStream(stream: IStream): IProjector<T>;
 
-  fromStreams(...streams: Stream[]): IProjector<T>;
+  fromStreams(...streams: IStream[]): IProjector<T>;
 
   fromAll(): IProjector<T>;
 
@@ -70,14 +70,14 @@ export interface IProjector<T extends State = State> {
   run(keepRunning: boolean): Promise<void>;
 }
 
-export interface IReadModelProjector<R extends IReadModel, T extends State = State> {
+export interface IReadModelProjector<R extends IReadModel, T extends IState = IState> {
   readModel: R;
 
   init(callback: Function): IReadModelProjector<R, T>;
 
-  fromStream(stream: Stream): IReadModelProjector<R, T>;
+  fromStream(stream: IStream): IReadModelProjector<R, T>;
 
-  fromStreams(...streams: Stream[]): IReadModelProjector<R, T>;
+  fromStreams(...streams: IStream[]): IReadModelProjector<R, T>;
 
   fromAll(): IReadModelProjector<R, T>;
 
@@ -105,44 +105,43 @@ export interface IReadModelProjector<R extends IReadModel, T extends State = Sta
 export interface IQuery {
   init(callback: Function): IQuery;
 
-  fromStream(stream: Stream): IQuery;
+  fromStream(stream: IStream): IQuery;
 
-  fromStreams(...streams: Stream[]): IQuery;
+  fromStreams(...streams: IStream[]): IQuery;
 
   fromAll(): IQuery;
 
-  when(handlers: { [event: string]: <T extends State>(state: T, event: IEvent) => T }): IQuery;
+  when(handlers: { [event: string]: <T extends IState>(state: T, event: IEvent) => T }): IQuery;
 
-  whenAny(handler: <T extends State>(state: T, event: IEvent) => T): IQuery;
+  whenAny(handler: <T extends IState>(state: T, event: IEvent) => T): IQuery;
 
   reset(): Promise<void>;
 
   stop(): Promise<void>;
 
-  getState(): State;
+  getState(): IState;
 
   run(): Promise<void>;
 }
 
-export interface IProjectionConstructor<T extends State = State> {
+export interface IProjectionConstructor<T extends IState = IState> {
   new(projectorManager: IProjectionManager): IProjection<T>
   projectionName: string;
 }
 
-export interface IProjection<T extends State> {
+export interface IProjection<T extends IState> {
   run(keepRunning: boolean): Promise<any>;
   reset(): Promise<void>;
   getState(): T;
   delete(deleteEmittedEvents: boolean): Promise<void>;
 }
 
-export interface IReadModelProjectionConstructor<R extends IReadModel, T extends State> {
+export interface IReadModelProjectionConstructor<R extends IReadModel, T extends IState> {
   new(projectorManager: IProjectionManager, readModel: IReadModel): IReadModelProjection<R, T>
   projectionName: string;
 }
 
-export interface IReadModelProjection<R extends IReadModel, T extends State> {
-  projectionName: string;
+export interface IReadModelProjection<R extends IReadModel, T extends IState> {
   readModel: R;
 
   run(keepRunning: boolean): Promise<T>;

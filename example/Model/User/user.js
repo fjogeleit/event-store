@@ -32,8 +32,10 @@ module.exports = class User extends Aggregate {
     this.username = event.username;
   }
 
-  static registeredEvents = [
-    UserWasRegistered,
-    UserNameWasUpdated
-  ]
+  static registeredEvents() {
+    return [
+      UserWasRegistered,
+      UserNameWasUpdated
+    ];
+  }
 }

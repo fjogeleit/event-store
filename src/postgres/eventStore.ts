@@ -1,7 +1,6 @@
 import { EventStore } from '../eventStore'
-import { IProjectionManager } from '../projection/types'
+import { IProjectionManager, Options } from "../types";
 import { PostgresProjectionManager } from './projectionManager'
-import { Options } from "../index";
 import { PostgresPersistenceStrategy } from "./persistenceStrategy";
 
 export class PostgresEventStore extends EventStore

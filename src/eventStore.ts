@@ -1,5 +1,4 @@
 import {
-  IAggregateConstructor,
   AggregateEventMap,
   Options,
   EventAction,
@@ -7,18 +6,21 @@ import {
   IEventStore,
   IEvent,
   LoadStreamParameter,
-  MetadataMatcher
-} from "./index";
-
-import { AggregateRepository } from "./aggregate/aggregateRepository";
-import { IAggregate } from "./aggregate/types";
-import {
+  IMetadataMatcher,
   IProjection,
   IProjectionConstructor,
-  IProjectionManager, IReadModel,
+  IProjectionManager,
+  IReadModel,
   IReadModelProjection,
-  State
-} from "./projection/types";
+  IReadModelProjectionConstructor,
+  IState,
+  IAggregate,
+  IAggregateConstructor
+} from "./types";
+
+import { AggregateRepository } from "./aggregate";
+import { ProjectionNotFound } from "./exception";
+import { aggregateMap, projectionMap, readModelProjectionMap } from "./decorator";
 
 interface MiddlewareCollection {
   [EventAction.PRE_APPEND]: EventCallback[]
@@ -35,7 +37,7 @@ export interface PersistenceStrategy {
   createSchema(streamName: string): Promise<void>
   dropSchema(streamName: string): Promise<void>
   appendTo<T = object>(streamName: string, events: IEvent<T>[]): Promise<void>
-  load(streamName: string, fromNumber: number, count?: number, matcher?: MetadataMatcher): Promise<IEvent[]>
+  load(streamName: string, fromNumber: number, count?: number, matcher?: IMetadataMatcher): Promise<IEvent[]>
   mergeAndLoad(streams: Array<LoadStreamParameter>): Promise<IEvent[]>
   hasStream(streamName: string): Promise<boolean>
   deleteStream(streamName: string): Promise<void>
@@ -59,7 +61,7 @@ export abstract class EventStore implements IEventStore
       return carry;
     }, this.middleware);
 
-    this._eventMap = (options.aggregates || []).reduce((map, aggregate) => {
+    this._eventMap = [...aggregateMap(), ...(options.aggregates || [])].reduce((map, aggregate) => {
       map[aggregate.name] = aggregate;
 
       return map;
@@ -111,7 +113,7 @@ export abstract class EventStore implements IEventStore
   public async load(
     streamName: string,
     fromNumber: number = 1,
-    metadataMatcher?: MetadataMatcher
+    metadataMatcher?: IMetadataMatcher
   ): Promise<IEvent[]> {
     const events = await this.persistenceStrategy.load(streamName, fromNumber, undefined, metadataMatcher);
 
@@ -153,21 +155,31 @@ export abstract class EventStore implements IEventStore
 
   public abstract createProjectionManager(): IProjectionManager;
 
-  public getProjection<T extends State = any>(name: string): IProjection<T> {
-    const Projection = this.options.projections.find((projection) => projection.projectionName === name);
+  public getProjection<T extends IState = any>(name: string): IProjection<T> {
+    const projections: IProjectionConstructor<any>[] = [
+      ...this.options.projections,
+      ...projectionMap()
+    ];
+
+    const Projection = projections.find((projection) => projection.projectionName === name);
 
     if (!Projection) {
-      throw new Error(`A Projection with name ${name} does not exists`);
+      throw ProjectionNotFound.withName(name);
     }
 
     return new (Projection as any)(this.createProjectionManager())
   }
 
-  public getReadModelProjection<R extends IReadModel, T extends State = any>(name: string): IReadModelProjection<R, T> {
-    const { projection: ReadModelProjection, readModel} = this.options.readModelProjections.find(({ projection }) => projection.projectionName === name);
+  public getReadModelProjection<T extends IReadModelProjection<any, any>>(name: string): T {
+    const readModelProjections: Array<{ projection: IReadModelProjectionConstructor<any, any>, readModel: IReadModel }> = [
+      ...this.options.readModelProjections,
+      ...readModelProjectionMap()
+    ];
+
+    const { projection: ReadModelProjection, readModel } = readModelProjections.find(({ projection }) => projection.projectionName === name);
 
     if (!ReadModelProjection) {
-      throw new Error(`A Projection with name ${name} does not exists`);
+      throw ProjectionNotFound.withName(name);
     }
 
     return new (ReadModelProjection as any)(this.createProjectionManager(), readModel);

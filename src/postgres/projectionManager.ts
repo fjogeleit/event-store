@@ -1,18 +1,20 @@
 import { Pool } from "pg";
-import { EVENT_STREAMS_TABLE, IEventStore, PROJECTIONS_TABLE } from "../index";
+import { EVENT_STREAMS_TABLE, PROJECTIONS_TABLE } from "../index";
+import { PostgresProjector } from "./projector";
+import { Query } from "../projection";
+import { createPostgresClient } from "../helper";
+import { PostgresReadModelProjector } from "./readModelProjector";
+import { ProjectionNotFound } from "../exception";
 import {
+  IEventStore,
   IProjectionManager,
   ProjectionStatus,
   IProjector,
   IQuery,
-  State,
+  IState,
   IReadModel,
   IReadModelProjector
-} from "../projection/types";
-import { PostgresProjector } from "./projector";
-import { Query } from "../projection/query";
-import { createPostgresClient } from "../helper/postgres";
-import { PostgresReadModelProjector } from "./readModelProjector";
+} from "../types";
 
 export class PostgresProjectionManager implements IProjectionManager {
   private readonly client: Pool;
@@ -21,11 +23,11 @@ export class PostgresProjectionManager implements IProjectionManager {
     this.client = createPostgresClient(this.connectionString);
   }
 
-  createProjector<T extends State = State>(name: string): IProjector<T> {
+  createProjector<T extends IState = IState>(name: string): IProjector<T> {
     return new PostgresProjector(name, this, this.eventStore, this.client)
   }
 
-  createReadModelProjector<R extends IReadModel, T extends State = State>(name: string, readModel: R): IReadModelProjector<R, T> {
+  createReadModelProjector<R extends IReadModel, T extends IState = IState>(name: string, readModel: R): IReadModelProjector<R, T> {
     return new PostgresReadModelProjector<R, T>(name, this, this.eventStore, this.client, readModel)
   }
 
@@ -68,31 +70,23 @@ export class PostgresProjectionManager implements IProjectionManager {
   }
 
   private async _updateProjectionStatus(name: string, status: ProjectionStatus): Promise<void> {
-    try {
-      const result = await this.client.query(`UPDATE ${PROJECTIONS_TABLE} SET status = $1 WHERE "name" = $2`, [
-        status,
-        name
-      ]);
+    const result = await this.client.query(`UPDATE ${PROJECTIONS_TABLE} SET status = $1 WHERE "name" = $2`, [
+      status,
+      name
+    ]);
 
-      if (result.rowCount === 0) {
-        throw new Error(`Projection ${name} not found`)
-      }
-    } catch (error) {
-      throw new Error(`ProjectionTable update failed ${error.toString()}`)
+    if (result.rowCount === 0) {
+      throw ProjectionNotFound.withName(name);
     }
   }
 
   private async _selectProjectionProperty<T>(name: string, property: string): Promise<T> {
-    try {
-      const result = await this.client.query<T>(`SELECT "${property}" FROM ${PROJECTIONS_TABLE} WHERE "name" = $1 LIMIT 1`, [name]);
+    const result = await this.client.query<T>(`SELECT "${property}" FROM ${PROJECTIONS_TABLE} WHERE "name" = $1 LIMIT 1`, [name]);
 
-      if (result.rowCount === 0) {
-        throw new Error(`Projection ${ name } not found`)
-      }
-
-      return result.rows[0][property];
-    } catch (error) {
-      throw new Error(`State fetch failed with ${error.toString()} for ${property}`)
+    if (result.rowCount === 0) {
+      throw ProjectionNotFound.withName(name);
     }
+
+    return result.rows[0][property];
   }
 }

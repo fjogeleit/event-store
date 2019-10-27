@@ -1,13 +1,17 @@
 import {
-  BaseEvent,
   IEventStore,
-  FieldType, IEvent,
+  FieldType,
+  IEvent,
   IEventConstructor,
-  MetadataMatcher,
-  MetadataOperator
-} from "../index";
+  IMetadataMatcher,
+  MetadataOperator,
+  Repository,
+  RepositoryConfiguration,
+  IAggregate
+} from "../types";
 
-import { Repository, RepositoryConfiguration, IAggregate } from "./types";
+import { AggregateNotFound } from "../exception";
+import { BaseEvent } from "../event";
 
 interface EventMap {
   [name: string]: IEventConstructor
@@ -21,7 +25,7 @@ export class AggregateRepository<T extends IAggregate> implements Repository<T> 
     this.eventStore = options.eventStore;
     const AggregateConstructor = options.eventStore.eventMap[options.aggregate.name];
 
-    const events = (AggregateConstructor || { registeredEvents: [] as Array<IEventConstructor> }).registeredEvents;
+    const events: IEventConstructor[] = (AggregateConstructor || { registeredEvents: () => [] as Array<IEventConstructor> }).registeredEvents();
 
     this.eventMap = events.reduce<{ [name: string]: IEventConstructor }>((events, event) => {
       events[event.name] = event;
@@ -37,7 +41,7 @@ export class AggregateRepository<T extends IAggregate> implements Repository<T> 
   }
 
   public async get(aggregateId: string) {
-    const matcher: MetadataMatcher = {
+    const matcher: IMetadataMatcher = {
       data: [
         { operation: MetadataOperator.EQUALS, field: '_aggregate_id', fieldType: FieldType.METADATA, value: aggregateId }
       ]
@@ -48,7 +52,7 @@ export class AggregateRepository<T extends IAggregate> implements Repository<T> 
     let aggregate: T = new this.options.aggregate();
 
     if (events.length === 0) {
-      throw new Error(`${aggregate.constructor.name} not found`)
+      throw AggregateNotFound.withName(aggregate.constructor.name);
     }
 
     aggregate.fromHistory(events.map<IEvent>(event => {

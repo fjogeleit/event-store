@@ -1,18 +1,22 @@
+import {
+  FieldType,
+  IEvent,
+  IEventConstructor,
+  LoadStreamParameter,
+  IMetadataMatcher,
+  MetadataOperator,
+  Options,
+  WriteLockStrategy
+} from "../types";
+
 import { Pool, types } from "pg";
 import * as format from "pg-format";
-
-import {
-  EVENT_STREAMS_TABLE,
-  FieldType,
-  IEvent, IEventConstructor, LoadStreamParameter,
-  MetadataMatcher,
-  MetadataOperator, Options, PROJECTIONS_TABLE, WriteLockStrategy
-} from "../index";
-
 import { BaseEvent } from "../event";
-import { createPostgresClient } from "../helper/postgres";
+import { createPostgresClient } from "../helper";
 import { PostgresWriteLockStrategy } from "./writeLockStrategy";
 import { PersistenceStrategy } from "../eventStore";
+import { StreamAlreadyExists, StreamNotFound, ConcurrencyException } from "../exception";
+import { EVENT_STREAMS_TABLE, PROJECTIONS_TABLE } from "../index";
 
 const sha1 = require("sha1");
 
@@ -44,7 +48,7 @@ export class PostgresPersistenceStrategy implements PersistenceStrategy{
     this.writeLock = new PostgresWriteLockStrategy(this.client);
 
     this.eventMap = this.options.aggregates.reduce((eventMap, aggregate) => {
-      const items = aggregate.registeredEvents.reduce<{ [aggregateEvent: string]: IEventConstructor }>((item, event) => {
+      const items = aggregate.registeredEvents().reduce<{ [aggregateEvent: string]: IEventConstructor }>((item, event) => {
         item[`${aggregate.name}:${event.name}`] = event;
 
         return item;
@@ -116,7 +120,7 @@ export class PostgresPersistenceStrategy implements PersistenceStrategy{
 
     } catch (error) {
       if (['23000', '23505'].includes(error.code)) {
-        throw new Error(`Stream ${streamName} already exists`)
+        throw StreamAlreadyExists.withName(streamName)
       }
 
       throw new Error(`Error ${error.code}: EventStream Table exists? ErrorDetails: ${error.toString()}`)
@@ -186,11 +190,11 @@ export class PostgresPersistenceStrategy implements PersistenceStrategy{
       await this.client.query(format(`INSERT INTO ${ tableName } (event_id, event_name, payload, metadata, created_at) VALUES %L`, data))
     } catch (error) {
       if (['23000', '23505'].includes(error.code)) {
-        throw new Error(`Concurrency Error: ${error.toString()}`)
+        throw ConcurrencyException.with(error.message)
       }
 
       if (error.code !== '0000') {
-        throw new Error(`Concurrency Error: ${error.toString()}`)
+        throw ConcurrencyException.with(error.message)
       }
 
       throw error;
@@ -199,7 +203,7 @@ export class PostgresPersistenceStrategy implements PersistenceStrategy{
     }
   }
 
-  public async load(streamName: string, fromNumber: number, count?: number, matcher?: MetadataMatcher) {
+  public async load(streamName: string, fromNumber: number, count?: number, matcher?: IMetadataMatcher) {
     const { query, values } = await this.createQuery(streamName, fromNumber, matcher);
 
     const { rows } = await this.client.query({
@@ -264,11 +268,11 @@ export class PostgresPersistenceStrategy implements PersistenceStrategy{
     });
   }
 
-  private async createQuery(streamName: string, fromNumber: number, matcher?: MetadataMatcher, paramCounter = 0) {
+  private async createQuery(streamName: string, fromNumber: number, matcher?: IMetadataMatcher, paramCounter = 0) {
     const result = await this.client.query(`SELECT stream_name FROM ${EVENT_STREAMS_TABLE} WHERE real_stream_name = $1`, [streamName]);
 
     if (result.rowCount === 0) {
-      throw new Error(`Stream ${streamName} not found`)
+      throw StreamNotFound.withName(streamName)
     }
 
     const tableName = generateTable(streamName);
@@ -283,7 +287,7 @@ export class PostgresPersistenceStrategy implements PersistenceStrategy{
     return { query: `SELECT *, '${streamName}' as stream FROM ${tableName} ${whereCondition} ORDER BY no ASC`, values };
   }
 
-  private createWhereClause(matcher?: MetadataMatcher, paramCounter = 0): { where: string[], values: any[] } {
+  private createWhereClause(matcher?: IMetadataMatcher, paramCounter = 0): { where: string[], values: any[] } {
     const where = [];
     const values = [];
 

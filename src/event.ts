@@ -1,6 +1,6 @@
-import { EventMetadata, IEvent } from "./index";
+import { EventMetadata, IDateTime, IEvent } from "./types";
 import * as uuid from 'uuid/v4';
-import { DateTime, IDateTime } from "./helper/dateTime";
+import { DateTime } from "./helper";
 
 const microtime = require('microtime');
 

@@ -21,7 +21,9 @@ module.exports = class Comment extends Aggregate {
     this.message = event.message;
   }
 
-  static registeredEvents = [
-    CommentWasWritten
-  ]
+  static registeredEvents() {
+    return [
+      CommentWasWritten
+    ];
+  }
 }
