@@ -4,7 +4,7 @@ Event Log is an EventStore heavily inspired by the prooph/event-store v7.0.
 
 ## Implemented:
 - **SingleStream Strategy**: Create a Stream for each Aggregate
-- Loading and Saving Aggregates
+- Loading and saving Aggregates
 - Persistent Projections
 - ReadModel Projections
 - Event Queries
@@ -29,7 +29,7 @@ The following descriptions using TypeScript. The integrated example serve using 
 ```
 # main.ts
 
-import { createEventStore } from '@fj/event-store';
+import { createEventStore } from 'fj-event-store';
 
 const eventStore = createEventStore({
   // Postgres ConnectionString  
@@ -54,7 +54,7 @@ Create a basic events with immutable values and payload autocomplete
 ```
 # model/todo/event/todo-was-added.ts
 
-import { BaseEvent } from '@fj/event-store';
+import { BaseEvent } from 'fj-event-store';
 
 interface TodoPayload {
   task: string;
@@ -93,8 +93,8 @@ Each Aggregate calls internal a method with the name-schema `_when${EventClassNa
 ```
 # model/todo/todo.ts
 
-import { AbstractAggregate } from '@fj/event-store';
-import { Aggregate } from '@fj/event-store';
+import { AbstractAggregate } from 'fj-event-store';
+import { Aggregate } from 'fj-event-store';
 import { TodoWasAdded } from './event';
 
 @Aggregate([TodoWasAdded])
@@ -150,7 +150,7 @@ Each Repository has 2 methods to save and load aggregates.
 ```
 # model/todo/todo-repository.ts
 
-import { AggregateRepository, Repository } from '@fj/event-store';
+import { AggregateRepository, Repository } from 'fj-event-store';
 import { Todo } from './todo';
 
 @Repository({ streamName: 'todos', aggregate: Todo })
@@ -163,7 +163,7 @@ export class TodoRepository extends AggregateRepository<Todo> {}
 # main.ts
 
 import * as uuid from 'uuid/v4'
-import { createEventStore } from '@fj/event-store';
+import { createEventStore } from 'fj-event-store';
 import { Todo, TodoRepository } from './todo/model';
 
 (async () => {
@@ -176,7 +176,7 @@ import { Todo, TodoRepository } from './todo/model';
 
     const todo = Todo.add(
         uuid(),
-        'Using @fj/event-store',
+        'Using fj-event-store',
         'Using EventSourcing in my next NodeJS project',
         new Date()
     );
