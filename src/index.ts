@@ -1,13 +1,13 @@
 import { PostgresEventStore } from './postgres';
 import { InMemoryEventStore } from './in-memory';
 
-import { Configuration, Driver } from './types';
+import { Configuration, Driver, IEventStore } from './types';
 import { Registry } from './registry';
 
 export const EVENT_STREAMS_TABLE = 'event_streams';
 export const PROJECTIONS_TABLE = 'projections';
 
-export const createEventStore = ({ connectionString, aggregates, projections, readModelProjections, middleware, driver }: Configuration) => {
+export const createEventStore = ({ connectionString, aggregates, projections, readModelProjections, middleware, driver }: Configuration): IEventStore => {
   if (driver === Driver.IN_MEMORY) {
     return new InMemoryEventStore({
       connectionString: null,

@@ -20,7 +20,7 @@ program
   .version('0.1.0')
   .usage('--help')
   .description('CLI to manage Event Log streams')
-  .option('-c, --config <path>', 'Path to your event-store.config file', '../event-store.config.js')
+  .option('-c, --config <path>', 'Path to your event-store.config file', '../../../event-store.config.js')
 
 program
   .command('event-stream:create <streamName>')

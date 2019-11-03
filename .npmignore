@@ -7,3 +7,4 @@ package-lock.json
 tslint.json
 tsconfig.json
 .prettierrc
+event-store.config.js
