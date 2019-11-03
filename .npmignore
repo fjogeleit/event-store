@@ -1,5 +1,7 @@
 # source
 src
+example
+test
 index.ts
 package-lock.json
 tslint.json
