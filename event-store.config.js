@@ -1,18 +1,14 @@
-require('dotenv').config({
-  path: 'example/.env'
-})
-
-const User = require('./example/Model/User/user')
-const Comment = require('./example/Model/Comment/comment')
-const UserListProjection = require('./example/Projection/userList')
-const { UserTableProjection, UserTableReadModel } = require('./example/Projection/userTable')
+const User = require('./example/model/user/user')
+const Comment = require('./example/model/comment/comment')
+const UserListProjection = require('./example/projection/user-list')
+const { UserTableProjection, UserTableReadModel } = require('./example/projection/user-table')
 const { SQLClient } = require('./dist/helper/postgres')
 const { Pool } = require('pg')
 
 const connection = new Pool({ connectionString: process.env.POSTGRES_CONNECTION });
 
 module.exports = {
-  connectionString: process.env.POSTGRES_CONNECTION,
+  connectionString: 'postgres://user:password@localhost/event-store',
   aggregates: [
     User,
     Comment

@@ -1,6 +1,6 @@
 {
   "name": "fj-event-store",
-  "version": "0.1.4",
+  "version": "0.1.6",
   "description": "A EventStore for NodeJS inspired from the prooph/event-store v7.",
   "author": "Frank Jogeleit <frank.jogeleit@web,de>",
   "license": "MIT",
@@ -32,7 +32,6 @@
     "@types/node": "11.13.21",
     "@types/pg-format": "^1.0.0",
     "@types/uuid": "^3.4.6",
-    "dotenv": "^8.2.0",
     "fastify": "^2.10.0",
     "fastify-postgres": "^2.0.0",
     "jest": "24.9.0",

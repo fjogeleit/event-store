@@ -1,4 +1,4 @@
-const CommentWasWritten = require('./Event/CommentWasWritten')
+const CommentWasWritten = require('./event/comment-was-written')
 
 const { AbstractAggregate } = require('../../../')
 

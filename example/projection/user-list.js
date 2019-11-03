@@ -1,7 +1,7 @@
 const { AbstractProjection } = require('../../')
 
-const UserWasRegistered = require('../Model/User/Event/UserWasRegistered')
-const UserNameWasUpdated = require('../Model/User/Event/UserNameWasUpdated')
+const UserWasRegistered = require('../model/user/event/user-was-registered')
+const UserNameWasUpdated = require('../model/user/event/user-name-was-updated')
 
 module.exports = class UserListProjection extends AbstractProjection {
   static projectionName = 'projection_users';

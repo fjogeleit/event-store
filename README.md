@@ -279,15 +279,15 @@ Commands:
 # Install the dependencies (including DEV-dependencies)
 npm install
 
+# Install peerDependencies for a Postgres EventStore
+npm i pg @types/pg --no-save
+
 # Transpile Typescript
 npm run watch
 
 # Run the Example Server
 npm run serve
 ```
-
-- Create a Stream called `users` by using the CLI: `bin/event-store event-stream:create users`
-- Create a Stream called `comments` by using the CLI: `bin/event-store event-stream:create comments`
 
 After the Server started you should see the Message `EventStore installed` in your Terminal if the DB preparation was succeeded
 

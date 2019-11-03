@@ -1,7 +1,7 @@
 const { AbstractReadModelProjection, AbstractReadModel } = require('../../')
 
-const UserWasRegistered = require('../Model/User/Event/UserWasRegistered')
-const UserNameWasUpdated = require('../Model/User/Event/UserNameWasUpdated')
+const UserWasRegistered = require('../model/user/event/user-was-registered')
+const UserNameWasUpdated = require('../model/user/event/user-name-was-updated')
 
 const USER_TABLE = `app_users`;
 

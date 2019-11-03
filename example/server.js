@@ -1,25 +1,33 @@
 const fastify = require('fastify')()
 const uuid = require('uuid/v4')
-const port = process.env.SERVER_PORT || 3000
+const port = 3000
 
-const eventLog = require('../dist/index')
+const { createEventStore } = require('../dist/index')
 const config = require('../event-store.config')
 
-const User = require('./Model/User/user')
-const UserWasRegistered = require('./Model/User/Event/UserWasRegistered')
-const UserNameWasUpdated = require('./Model/User/Event/UserNameWasUpdated')
+const User = require('./model/user/user')
+const UserWasRegistered = require('./model/user/event/user-was-registered')
+const UserNameWasUpdated = require('./model/user/event/user-name-was-updated')
 
-const Comment = require('./Model/Comment/comment')
-const CommentWasWritten = require('./Model/Comment/Event/CommentWasWritten')
+const Comment = require('./model/comment/comment')
+const CommentWasWritten = require('./model/comment/event/comment-was-written')
 
 fastify.register((fastify, opts, next) => {
-  const eventStore = eventLog.createEventStore(config)
+  const eventStore = createEventStore(config)
 
   const userRepository = eventStore.createRepository('users', User)
   const commentRepository = eventStore.createRepository('comments', Comment)
 
   eventStore.install()
-    .then(() => console.info(`${eventStore.constructor.name} installed`))
+    .then((store) => {
+      store.createStream('users')
+        .then(() => console.log('users stream created'))
+        .catch(() => console.log('users stream exists'))
+
+      store.createStream('comments')
+        .then(() => console.log('comments stream created'))
+        .catch(() => console.log('comments stream exists'))
+    })
     .catch((e) => console.error('Error by prepare the IEventStore Tables', e))
 
   const projectionManager = eventStore.getProjectionManager();
@@ -119,11 +127,13 @@ fastify.register((fastify, opts, next) => {
     try {
       const projection = eventStore.getProjector('projection_users')
 
-      return Object.values(await projection.run(false))
+      await projection.run(false)
+
+      return Object.values(projection.getState())
     } catch (e) {
       reply.type('application/json').code(500)
 
-      return { content: e.stack }
+      return { content: e.message }
     }
   })
 

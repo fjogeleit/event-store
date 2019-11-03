@@ -1,5 +1,5 @@
-const UserWasRegistered = require('./Event/UserWasRegistered')
-const UserNameWasUpdated = require('./Event/UserNameWasUpdated')
+const UserWasRegistered = require('./event/user-was-registered')
+const UserNameWasUpdated = require('./event/user-name-was-updated')
 
 const { AbstractAggregate } = require('../../../')
 
