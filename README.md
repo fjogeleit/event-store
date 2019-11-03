@@ -1,6 +1,6 @@
 # Event-Store v0.1
 
-Event Log is an EventStore heavily inspired by the prooph/event-store v7.0.
+FJ-EventStore is an EventStore heavily inspired by the prooph/event-store v7.0.
 
 ## Implemented:
 - **SingleStream Strategy**: Create a Stream for each Aggregate
