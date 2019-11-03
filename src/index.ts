@@ -23,8 +23,12 @@ export const createEventStore = ({ connectionString, aggregates, projections, re
   });
 };
 
-export * from './postgres';
-export * from './in-memory';
 export * from './helper';
 export * from './event';
 export * from './types';
+export * from './aggregate';
+export * from './decorator';
+export * from './projection';
+export * from './exception';
+export * from './in-memory';
+export * from './postgres';
