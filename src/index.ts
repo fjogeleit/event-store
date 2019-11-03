@@ -26,6 +26,7 @@ export const createEventStore = ({ connectionString, aggregates, projections, re
 export * from './helper';
 export * from './event';
 export * from './types';
+export * from './middleware';
 export * from './aggregate';
 export * from './decorator';
 export * from './projection';
