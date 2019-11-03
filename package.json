@@ -1,7 +1,7 @@
 {
   "name": "@fj/event-store",
   "version": "0.1.0",
-  "description": "Event Store",
+  "description": "A EventStore for NodeJS inspired from the prooph/event-store v7.",
   "author": "Frank Jogeleit <frank.jogeleit@web,de>",
   "license": "MIT",
   "main": "index.js",
@@ -10,7 +10,9 @@
     "serve": "nodemon -w ./dist -w ./example example/server.js",
     "build": "tsc -p tsconfig.json",
     "watch": "tsc -p tsconfig.json --watch",
-    "prettier": "prettier src/**/*.ts --write && git status"
+    "prettier": "prettier src/**/*.ts --write && git status",
+    "prepublish:npm": "npm run build",
+    "publish:npm": "npm publish --access public"
   },
   "devDependencies": {
     "@types/jest": "24.0.18",
