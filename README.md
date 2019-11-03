@@ -45,7 +45,7 @@ await eventStore.install();
 ### Create a new EventStream with the integrated CLI helper
 
 ```
-./node_modules/.bin/event-store event-stream:create <streamName>
+event-store event-stream:create <streamName>
 ```
 
 ### Create an Aggregate with the related Events using the included Decorator
@@ -200,8 +200,8 @@ Using the AbstractProjection class and configure them with the helper Decorator
 ```
 # projection/todo/todo-list.ts
 
-import { AbstractProjection } from 'event-log';
-import { Projection, IProjector } from 'event-log';
+import { AbstractProjection } from 'fj-event-store';
+import { Projection, IProjector } from 'fj-event-store';
 import { TodoWasAdded } from '../../model/todo/event';
 
 export interface TodoListState {
@@ -243,7 +243,7 @@ export class TodoListProjection extends AbstractProjection<TodoListState> {
 
 ## Using the Command Line Tool
 
-The CLI `node/modules/.bin/event-store` supports the usage of EventStore with different helper commands for EventStreams and Projections.
+The CLI `event-store` supports the usage of EventStore with different helper commands for EventStreams and Projections.
 
 ```
 Usage: event-store [command] --help
@@ -252,7 +252,7 @@ CLI to manage EventStore streams
 
 Options:
   -V, --version                       output the version number
-  -c, --config <path>                 Path to your event-store.config file (default: "../event-store.config.js")
+  -c, --config <path>                 Path to your event-store.config file (default: ProjectRoot: event-store.config.js)
   -h, --help                          output usage information
 
 Commands:
