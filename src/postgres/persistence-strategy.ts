@@ -9,7 +9,7 @@ import { PersistenceStrategy } from '../event-store';
 import { StreamAlreadyExists, StreamNotFound, ConcurrencyException } from '../exception';
 import { EVENT_STREAMS_TABLE, PROJECTIONS_TABLE } from '../index';
 
-const sha1 = require('sha1');
+const sha1 = require('js-sha1');
 
 export const generateTable = (streamName: string): string => {
   return `_${sha1(streamName)}`;

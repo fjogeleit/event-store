@@ -20,7 +20,6 @@
     "@types/node": "11.13.21",
     "@types/pg": "^7.11.2",
     "@types/pg-format": "^1.0.0",
-    "@types/sha1": "^1.1.2",
     "@types/uuid": "^3.4.5",
     "dotenv": "^8.2.0",
     "fastify": "^2.10.0",
@@ -45,13 +44,13 @@
   "dependencies": {
     "commander": "^3.0.2",
     "figlet": "^1.2.4",
+    "js-sha1": "^0.6.0",
     "kleur": "^3.0.3",
     "lodash.clonedeep": "^4.5.0",
     "microtime": "^3.0.0",
     "pg": "^7.12.1",
     "pg-format": "^1.0.4",
     "reflect-metadata": "^0.1.13",
-    "sha1": "^1.1.1",
     "uuid": "^3.3.3"
   }
 }
