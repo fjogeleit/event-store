@@ -1,13 +1,13 @@
-const { Projection } = require('../../dist/projection/projection')
+const { AbstractProjection } = require('../../')
 
 const UserWasRegistered = require('../Model/User/Event/UserWasRegistered')
 const UserNameWasUpdated = require('../Model/User/Event/UserNameWasUpdated')
 
-module.exports = class UserListProjection extends Projection {
+module.exports = class UserListProjection extends AbstractProjection {
   static projectionName = 'projection_users';
 
-  async run(keepRunning = false) {
-    await this.projector
+  project() {
+    return this.projector
       .fromStream({ streamName: 'users' })
       .init(() => ({}))
       .when({
@@ -21,9 +21,6 @@ module.exports = class UserListProjection extends Projection {
 
           return state;
         }
-      })
-      .run(keepRunning);
-
-    return Object.values(this.projector.getState() || {});
+      });
   }
 }

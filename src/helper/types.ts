@@ -5,12 +5,12 @@ export interface IDateTime {
 }
 
 export interface IDateTimeConstructor {
-  new(microtime: number): IDateTime
-  now(): IDateTime
+  new (microtime: number): IDateTime;
+  now(): IDateTime;
 }
 
 export interface Client<T> {
-  readonly connection: T
+  readonly connection: T;
 
   insert(collection: string, values: Values): Promise<void>;
   update(collection: string, values: Values, identifiers: Identifiers): Promise<void>;

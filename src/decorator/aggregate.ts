@@ -1,12 +1,10 @@
-import { IEventConstructor, IAggregateConstructor } from "../types";
-import { AGGREGATE_CONFIG } from "./constants";
+import { IEventConstructor } from '../types';
+import { AGGREGATE } from './';
+import { Registry } from '../registry';
+import { IAggregateConstructor } from '../aggregate';
 
-const aggregates: IAggregateConstructor[] = [];
+export const Aggregate = (events: IEventConstructor[]) => (target: IAggregateConstructor) => {
+  Reflect.defineMetadata(AGGREGATE, events, target);
 
-export const aggregateMap = () => aggregates;
-
-export const AggregateConfig = (events: IEventConstructor[]) => (target: IAggregateConstructor) =>  {
-  Reflect.defineMetadata(AGGREGATE_CONFIG, events, target);
-
-  aggregates.push(target)
+  Reflect.defineMetadata(AGGREGATE, [...(Reflect.getMetadata(AGGREGATE, Registry) || []), target], Registry);
 };

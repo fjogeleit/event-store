@@ -1,12 +1,11 @@
-const { ReadModelProjection } = require('../../dist/projection/readModelProjection')
-const { ReadModel } = require('../../dist/projection/readModel')
+const { AbstractReadModelProjection, AbstractReadModel } = require('../../')
 
 const UserWasRegistered = require('../Model/User/Event/UserWasRegistered')
 const UserNameWasUpdated = require('../Model/User/Event/UserNameWasUpdated')
 
 const USER_TABLE = `app_users`;
 
-class UserTableReadModel extends ReadModel {
+class UserTableReadModel extends AbstractReadModel {
   /**
    * @param {SQLClient} client
    */
@@ -53,11 +52,11 @@ class UserTableReadModel extends ReadModel {
   }
 }
 
-class UserTableProjection extends ReadModelProjection {
+class UserTableProjection extends AbstractReadModelProjection {
   static projectionName = 'table_users';
 
-  async run(keepRunning = false) {
-    await this.projector
+  project() {
+    return this.projector
       .fromStream({ streamName: 'users' })
       .init(() => ({}))
       .when({
@@ -71,10 +70,7 @@ class UserTableProjection extends ReadModelProjection {
 
           return state;
         }
-      })
-      .run(keepRunning);
-
-    return Object.values(this.projector.getState() || {});
+      });
   }
 }
 

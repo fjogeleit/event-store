@@ -1,8 +1,8 @@
 const CommentWasWritten = require('./Event/CommentWasWritten')
 
-const Aggregate = require('../../../dist/aggregate/aggregate').Aggregate
+const { AbstractAggregate } = require('../../../')
 
-module.exports = class Comment extends Aggregate {
+module.exports = class Comment extends AbstractAggregate {
   commentId = ''
   userId = ''
   message = ''

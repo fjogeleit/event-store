@@ -1,4 +1,4 @@
-import { IEventStore, IEvent, IEventConstructor } from "../types";
+import { IEventStore, IEvent, IEventConstructor } from '../types';
 
 export interface IAggregateConstructor<T = object> {
   new (): T;
@@ -6,8 +6,8 @@ export interface IAggregateConstructor<T = object> {
 }
 
 export interface IAggregate {
-  popEvents: () => IEvent[]
-  fromHistory: (events: IEvent[]) => IAggregate
+  popEvents: () => IEvent[];
+  fromHistory: (events: IEvent[]) => IAggregate;
 }
 
 export interface RepositoryConfiguration<T> {
@@ -16,7 +16,14 @@ export interface RepositoryConfiguration<T> {
   streamName: string;
 }
 
-export interface Repository<T extends IAggregate> {
+export interface IAggregateRepository<T extends IAggregate> {
   save(aggregate: T): Promise<void>;
   get(aggregateId: string): Promise<T>;
 }
+
+export interface IAggregateRepositoryConstructor<T extends IAggregate> {
+  new (): IAggregateRepository<T>;
+}
+
+export * from './aggregate';
+export * from './aggregate-repository';

@@ -1,29 +1,26 @@
-import {
-  IProjectionManager,
-  ProjectionStatus,
-  IQuery,
-  IState,
-  IStream,
-  IEventStore,
-  IEvent,
-  IMetadataMatcher
-} from "../types";
+import { IEventStore, IEvent, IMetadataMatcher } from '../';
 
-import { ProjectorException } from "../exception";
+import { ProjectorException } from '../exception';
+import { IProjectionManager, IQuery, IState, IStream, ProjectionStatus } from './types';
 
 const cloneDeep = require('lodash.clonedeep');
 
 export class Query<T extends IState> implements IQuery {
   private state?: T;
   private initHandler?: () => T;
-  private handlers?: { [event: string]: (state: T, event: IEvent) => T | Promise<T> };
+  private handlers?: {
+    [event: string]: (state: T, event: IEvent) => T | Promise<T>;
+  };
   private handler?: (state: T, event: IEvent) => T | Promise<T>;
   private metadataMatchers: { [streamName: string]: IMetadataMatcher } = {};
 
   private isStopped: boolean = false;
   private streamPositions: { [stream: string]: number } = {};
 
-  private query: { all: boolean, streams: Array<string> } = { all: false, streams: [] };
+  private query: { all: boolean; streams: Array<string> } = {
+    all: false,
+    streams: [],
+  };
 
   constructor(
     private readonly manager: IProjectionManager,
@@ -70,7 +67,7 @@ export class Query<T extends IState> implements IQuery {
       throw ProjectorException.fromWasAlreadyCalled();
     }
 
-    this.query.streams = streams.map((stream) => stream.streamName);
+    this.query.streams = streams.map(stream => stream.streamName);
     this.metadataMatchers = streams.reduce((matchers, stream) => {
       matchers[stream.streamName] = stream.matcher;
 
@@ -109,7 +106,7 @@ export class Query<T extends IState> implements IQuery {
     this.state = undefined;
 
     if (this.initHandler !== undefined) {
-      this.state = this.initHandler()
+      this.state = this.initHandler();
     }
   }
 
@@ -136,19 +133,21 @@ export class Query<T extends IState> implements IQuery {
     await this.prepareStreamPosition();
 
     try {
-        const evenStream = await this.eventStore.mergeAndLoad(...Object.entries(this.streamPositions).map(([streamName, position]) => ({
+      const evenStream = await this.eventStore.mergeAndLoad(
+        ...Object.entries(this.streamPositions).map(([streamName, position]) => ({
           streamName,
           fromNumber: position + 1,
-          matcher: this.metadataMatchers[streamName]
-        })));
+          matcher: this.metadataMatchers[streamName],
+        }))
+      );
 
-        if (this.handler) {
-          await this.handleStreamWithSingleHandler(evenStream);
-        } else {
-          await this.handleStreamWithHandlers(evenStream);
-        }
+      if (this.handler) {
+        await this.handleStreamWithSingleHandler(evenStream);
+      } else {
+        await this.handleStreamWithHandlers(evenStream);
+      }
     } catch (e) {
-      console.error(e)
+      console.error(e);
     }
   }
 

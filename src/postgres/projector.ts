@@ -1,23 +1,17 @@
-import {
-  IProjectionManager,
-  ProjectionStatus,
-  IProjector,
-  IState,
-  IStream,
-  IEventStore,
-  IEvent,
-  IMetadataMatcher
-} from "../types";
-import { EVENT_STREAMS_TABLE, PROJECTIONS_TABLE } from "../index";
-import { Pool } from "pg";
-import { ProjectorException, ProjectionNotFound } from "../exception";
+import { IEventStore, IEvent, IMetadataMatcher } from '../types';
+import { IProjectionManager, ProjectionStatus, IProjector, IState, IStream } from '../projection';
+import { EVENT_STREAMS_TABLE, PROJECTIONS_TABLE } from '../index';
+import { Pool } from 'pg';
+import { ProjectorException, ProjectionNotFound } from '../exception';
 
 const cloneDeep = require('lodash.clonedeep');
 
 export class PostgresProjector<T extends IState = IState> implements IProjector<T> {
   private state?: T;
   private initHandler?: () => T;
-  private handlers?: { [event: string]: <R extends IEvent>(state: T, event: R) => T | Promise<T> };
+  private handlers?: {
+    [event: string]: <R extends IEvent>(state: T, event: R) => T | Promise<T>;
+  };
   private handler?: <R extends IEvent>(state: T, event: R) => T | Promise<T>;
   private metadataMatchers: { [streamName: string]: IMetadataMatcher } = {};
 
@@ -31,7 +25,10 @@ export class PostgresProjector<T extends IState = IState> implements IProjector<
   private persistBlockSize: number = 1000;
   private updateLockThreshold: number = 0;
 
-  private query: { all: boolean, streams: Array<string> } = { all: false, streams: [] };
+  private query: { all: boolean; streams: Array<string> } = {
+    all: false,
+    streams: [],
+  };
 
   constructor(
     private readonly name: string,
@@ -80,7 +77,7 @@ export class PostgresProjector<T extends IState = IState> implements IProjector<
       throw ProjectorException.fromWasAlreadyCalled();
     }
 
-    this.query.streams = streams.map((stream) => stream.streamName);
+    this.query.streams = streams.map(stream => stream.streamName);
     this.metadataMatchers = streams.reduce((matchers, stream) => {
       matchers[stream.streamName] = stream.matcher;
 
@@ -139,14 +136,14 @@ export class PostgresProjector<T extends IState = IState> implements IProjector<
     }
 
     if (deleteEmittedEvents) {
-      await this.eventStore.deleteStream(this.name)
+      await this.eventStore.deleteStream(this.name);
     }
 
     this.isStopped = true;
     this.state = undefined;
 
     if (this.initHandler !== undefined) {
-      this.state = this.initHandler()
+      this.state = this.initHandler();
     }
 
     this.streamPositions = {};
@@ -157,14 +154,14 @@ export class PostgresProjector<T extends IState = IState> implements IProjector<
     this.state = undefined;
 
     if (this.initHandler !== undefined) {
-      this.state = this.initHandler()
+      this.state = this.initHandler();
     }
 
     const result = await this.client.query(`UPDATE ${PROJECTIONS_TABLE} SET status = $1, state = $2, position = $3 WHERE "name" = $4`, [
       ProjectionStatus.IDLE,
       JSON.stringify(this.state || {}),
       JSON.stringify(this.streamPositions),
-      this.name
+      this.name,
     ]);
 
     if (result.rowCount === 0) {
@@ -172,9 +169,9 @@ export class PostgresProjector<T extends IState = IState> implements IProjector<
     }
 
     try {
-      await this.eventStore.deleteStream(this.name)
-    } catch(e) {
-      console.error(e)
+      await this.eventStore.deleteStream(this.name);
+    } catch (e) {
+      console.error(e);
     }
   }
 
@@ -205,7 +202,7 @@ export class PostgresProjector<T extends IState = IState> implements IProjector<
       throw ProjectorException.stateWasNotInitialised();
     }
 
-    switch(await this.fetchRemoteStatus()) {
+    switch (await this.fetchRemoteStatus()) {
       case ProjectionStatus.STOPPING:
         await this.load();
         await this.stop();
@@ -225,7 +222,7 @@ export class PostgresProjector<T extends IState = IState> implements IProjector<
         break;
     }
 
-    if (await this.projectionExists() === false) {
+    if ((await this.projectionExists()) === false) {
       await this.createProjection();
     }
 
@@ -237,11 +234,13 @@ export class PostgresProjector<T extends IState = IState> implements IProjector<
 
     try {
       do {
-        const evenStream = await this.eventStore.mergeAndLoad(...Object.entries(this.streamPositions).map(([streamName, position]) => ({
-          streamName,
-          fromNumber: position + 1,
-          matcher: this.metadataMatchers[streamName]
-        })));
+        const evenStream = await this.eventStore.mergeAndLoad(
+          ...Object.entries(this.streamPositions).map(([streamName, position]) => ({
+            streamName,
+            fromNumber: position + 1,
+            matcher: this.metadataMatchers[streamName],
+          }))
+        );
 
         if (this.handler) {
           await this.handleStreamWithSingleHandler(evenStream);
@@ -250,9 +249,11 @@ export class PostgresProjector<T extends IState = IState> implements IProjector<
         }
 
         if (0 === this.eventCounter) {
-          await new Promise((resolve) => setTimeout(() => {
-            resolve();
-          }, 100));
+          await new Promise(resolve =>
+            setTimeout(() => {
+              resolve();
+            }, 100)
+          );
 
           await this.updateLock();
         } else {
@@ -261,7 +262,7 @@ export class PostgresProjector<T extends IState = IState> implements IProjector<
 
         this.eventCounter = 0;
 
-        switch(await this.fetchRemoteStatus()) {
+        switch (await this.fetchRemoteStatus()) {
           case ProjectionStatus.STOPPING:
             await this.stop();
             break;
@@ -281,13 +282,20 @@ export class PostgresProjector<T extends IState = IState> implements IProjector<
         }
 
         await this.prepareStreamPosition();
-
       } while (keepRunning && !this.isStopped);
     } catch (e) {
-      console.error(e)
+      console.error(e);
     } finally {
       this.releaseLock();
     }
+  }
+
+  public progressEvent(event: string): boolean {
+    if (this.handler) {
+      return true;
+    }
+
+    return Object.keys(this.handlers).includes(event);
   }
 
   private async handleStreamWithSingleHandler(eventStreams: IEvent[]) {
@@ -333,7 +341,7 @@ export class PostgresProjector<T extends IState = IState> implements IProjector<
       this.createLockUntil(new Date()),
       JSON.stringify(this.state || {}),
       JSON.stringify(this.streamPositions),
-      this.name
+      this.name,
     ]);
 
     if (result.rowCount === 0) {
@@ -355,13 +363,19 @@ export class PostgresProjector<T extends IState = IState> implements IProjector<
   }
 
   private async load(): Promise<void> {
-    const result = await this.client.query<{ position: { [streamName: string]: number }, state: T }>(`SELECT position, state FROM ${ PROJECTIONS_TABLE } WHERE name = $1 LIMIT 1`, [this.name]);
+    const result = await this.client.query<{
+      position: { [streamName: string]: number };
+      state: T;
+    }>(`SELECT position, state FROM ${PROJECTIONS_TABLE} WHERE name = $1 LIMIT 1`, [this.name]);
 
     if (result.rowCount === 0) {
       throw ProjectionNotFound.withName(this.name);
     }
 
-    this.streamPositions = { ...this.streamPositions, ...result.rows[0].position };
+    this.streamPositions = {
+      ...this.streamPositions,
+      ...result.rows[0].position,
+    };
     this.state = { ...result.rows[0].state };
   }
 
@@ -369,7 +383,9 @@ export class PostgresProjector<T extends IState = IState> implements IProjector<
     let streamPositions = {};
 
     if (this.query.all) {
-      const result = await this.client.query<{ real_stream_name: string }>(`SELECT real_stream_name FROM ${ EVENT_STREAMS_TABLE } WHERE real_stream_name NOT LIKE '$%'`);
+      const result = await this.client.query<{ real_stream_name: string }>(
+        `SELECT real_stream_name FROM ${EVENT_STREAMS_TABLE} WHERE real_stream_name NOT LIKE '$%'`
+      );
 
       streamPositions = result.rows.reduce((acc, stream) => {
         acc[stream.real_stream_name] = 0;
@@ -391,8 +407,8 @@ export class PostgresProjector<T extends IState = IState> implements IProjector<
 
   private async fetchRemoteStatus(): Promise<ProjectionStatus> {
     try {
-      return await this.manager.fetchProjectionStatus(this.name)
-    } catch(e) {
+      return await this.manager.fetchProjectionStatus(this.name);
+    } catch (e) {
       return ProjectionStatus.RUNNING;
     }
   }
@@ -404,7 +420,7 @@ export class PostgresProjector<T extends IState = IState> implements IProjector<
     const result = await this.client.query(`UPDATE ${PROJECTIONS_TABLE} SET locked_until = $1, status = $2 WHERE "name" = $4`, [
       this.createLockUntil(now),
       ProjectionStatus.RUNNING,
-      this.name
+      this.name,
     ]);
 
     if (result.rowCount === 0) {
@@ -424,19 +440,17 @@ export class PostgresProjector<T extends IState = IState> implements IProjector<
   private async createProjection(): Promise<void> {
     await this.client.query(`INSERT INTO ${PROJECTIONS_TABLE} (name, position, state, status, locked_until) VALUES ($1, '{}', '{}', $2, NULL)`, [
       this.name,
-      this.status
-    ])
+      this.status,
+    ]);
   }
 
   private async acquireLock(): Promise<void> {
     const now = new Date();
 
-    await this.client.query(`UPDATE ${PROJECTIONS_TABLE} SET locked_until = $1, status = $2 WHERE name = $3 AND (locked_until IS NULL OR locked_until < $4)`, [
-      this.createLockUntil(now),
-      ProjectionStatus.RUNNING,
-      this.name,
-      now
-    ]);
+    await this.client.query(
+      `UPDATE ${PROJECTIONS_TABLE} SET locked_until = $1, status = $2 WHERE name = $3 AND (locked_until IS NULL OR locked_until < $4)`,
+      [this.createLockUntil(now), ProjectionStatus.RUNNING, this.name, now]
+    );
 
     this.status = ProjectionStatus.RUNNING;
     this.lastLockUpdate = now;
@@ -449,24 +463,18 @@ export class PostgresProjector<T extends IState = IState> implements IProjector<
       return;
     }
 
-    await this.client.query(`UPDATE ${PROJECTIONS_TABLE} SET locked_until = $1 WHERE name = $2;`, [
-      this.createLockUntil(now),
-      this.name
-    ]);
+    await this.client.query(`UPDATE ${PROJECTIONS_TABLE} SET locked_until = $1 WHERE name = $2;`, [this.createLockUntil(now), this.name]);
 
     this.lastLockUpdate = now;
   }
 
   private async releaseLock() {
-    await this.client.query(`UPDATE ${ PROJECTIONS_TABLE } SET locked_until = NULL, status = $1 WHERE name = $2`, [
-      ProjectionStatus.IDLE,
-      this.name
-    ]);
+    await this.client.query(`UPDATE ${PROJECTIONS_TABLE} SET locked_until = NULL, status = $1 WHERE name = $2`, [ProjectionStatus.IDLE, this.name]);
   }
 
   private createLockUntil(from: Date) {
     const lockTimeoutMs = this.lockTimeoutMs % 1000;
-    return (new Date(from.getTime() + (this.lockTimeoutMs - lockTimeoutMs) + lockTimeoutMs));
+    return new Date(from.getTime() + (this.lockTimeoutMs - lockTimeoutMs) + lockTimeoutMs);
   }
 
   private shouldUpdateLock(now: Date): boolean {

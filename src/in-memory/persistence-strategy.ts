@@ -1,14 +1,6 @@
-import {
-  FieldType,
-  IEvent,
-  IEventConstructor,
-  LoadStreamParameter,
-  IMetadataMatcher,
-  MetadataOperator,
-  Options
-} from "../types";
+import { FieldType, IEvent, IEventConstructor, LoadStreamParameter, IMetadataMatcher, MetadataOperator, Options } from '../types';
 
-import { PersistenceStrategy } from "../eventStore";
+import { PersistenceStrategy } from '../event-store';
 
 const cloneDeep = require('lodash.clonedeep');
 
@@ -17,14 +9,14 @@ export class InMemoryPersistenceStrategy implements PersistenceStrategy {
   private _eventStreams: { [streamName: string]: IEvent<any>[] } = {};
 
   constructor(private readonly options: Options) {
-    this.eventMap = this.options.aggregates.reduce((eventMap, aggregate) => {
+    this.eventMap = this.options.registry.aggregates.reduce((eventMap, aggregate) => {
       const items = aggregate.registeredEvents().reduce<{ [aggregateEvent: string]: IEventConstructor }>((item, event) => {
         item[`${aggregate.name}:${event.name}`] = event;
 
         return item;
       }, {});
 
-      return { ...eventMap, ...items }
+      return { ...eventMap, ...items };
     }, {});
   }
 
@@ -34,35 +26,34 @@ export class InMemoryPersistenceStrategy implements PersistenceStrategy {
 
   public async createEventStreamsTable() {
     this._eventStreams = {};
-  };
+  }
 
-  public async createProjectionsTable() {};
+  public async createProjectionsTable() {}
 
   public async addStreamToStreamsTable(streamName: string) {
     this._eventStreams[streamName] = [];
-  };
+  }
 
   public async removeStreamFromStreamsTable(streamName: string) {
     delete this._eventStreams[streamName];
-  };
+  }
 
   public async hasStream(streamName: string) {
-    return (streamName in this._eventStreams);
-  };
+    return streamName in this._eventStreams;
+  }
 
   public async deleteStream(streamName: string) {
     await this.removeStreamFromStreamsTable(streamName);
-  };
+  }
 
-  public async createSchema(streamName: string) {};
+  public async createSchema(streamName: string) {}
 
-  public async dropSchema(streamName: string) {};
+  public async dropSchema(streamName: string) {}
 
   public async appendTo<T = object>(streamName: string, events: IEvent<T>[]) {
-    this._eventStreams[streamName] = [
-      ...this._eventStreams[streamName],
-      ...events
-    ].sort((a, b) => a.metadata._aggregate_version - b.metadata._aggregate_version)
+    this._eventStreams[streamName] = [...this._eventStreams[streamName], ...events].sort(
+      (a, b) => a.metadata._aggregate_version - b.metadata._aggregate_version
+    );
   }
 
   public async load(streamName: string, fromNumber: number, count?: number, matcher?: IMetadataMatcher) {
@@ -79,7 +70,7 @@ export class InMemoryPersistenceStrategy implements PersistenceStrategy {
     }
 
     const rows = events.sort((a, b) => {
-      return a.createdAt.microtime - b.createdAt.microtime
+      return a.createdAt.microtime - b.createdAt.microtime;
     });
 
     return cloneDeep(rows);
@@ -111,36 +102,34 @@ export class InMemoryPersistenceStrategy implements PersistenceStrategy {
   private filter(events: IEvent[], matcher?: IMetadataMatcher) {
     if (!matcher) return events;
 
-    matcher.data.forEach((match) => {
+    matcher.data.forEach(match => {
       if (match.fieldType === FieldType.METADATA) {
-        events = events
-          .filter((event) => {
-            if (!(match.field in event.metadata)) {
-              return false;
-            }
+        events = events.filter(event => {
+          if (!(match.field in event.metadata)) {
+            return false;
+          }
 
-            return this.match(event.metadata[match.field], match.value, match.operation)
-          });
+          return this.match(event.metadata[match.field], match.value, match.operation);
+        });
 
         return events;
       }
 
       if (match.fieldType === FieldType.MESSAGE_PROPERTY) {
-        events = events
-          .filter((event) => {
-            switch (match.field) {
-              case 'createdAt':
-              case 'created_at':
-                return this.match(event.createdAt, match.value, match.operation);
-              case 'event_name':
-              case 'name':
-                return this.match(event.name, match.value, match.operation);
-              case 'uuid':
-                return this.match(event.uuid, match.value, match.operation);
-              default:
-                return false;
-            }
-          });
+        events = events.filter(event => {
+          switch (match.field) {
+            case 'createdAt':
+            case 'created_at':
+              return this.match(event.createdAt, match.value, match.operation);
+            case 'event_name':
+            case 'name':
+              return this.match(event.name, match.value, match.operation);
+            case 'uuid':
+              return this.match(event.uuid, match.value, match.operation);
+            default:
+              return false;
+          }
+        });
 
         return events;
       }

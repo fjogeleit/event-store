@@ -1,30 +1,31 @@
 import {
-  IProjection,
   IProjectionConstructor,
   IProjectionManager,
+  IProjector,
   IReadModel,
-  IReadModelProjection,
   IReadModelProjectionConstructor,
+  IReadModelProjector,
   IState,
-  IAggregate,
-  IAggregateConstructor,
-  IDateTime
-} from "./types";
+} from './projection';
+import { IDateTime } from './helper';
+import { IAggregate, IAggregateConstructor, IAggregateRepository } from './aggregate';
+import { Registry } from './registry';
 
 export enum Driver {
   POSTGRES = 'postgres',
-  IN_MEMORY = 'in_memory'
+  IN_MEMORY = 'in_memory',
 }
 
 export interface LoadStreamParameter {
   streamName: string;
-  fromNumber?: number
+  fromNumber?: number;
   count?: number;
   matcher?: IMetadataMatcher;
 }
 
 export interface IEventStore {
-  eventMap: AggregateEventMap
+  eventMap: AggregateEventMap;
+  registeredProjections: string[];
 
   install(): Promise<IEventStore>;
   load(streamName: string, fromNumber: number, metadataMatcher?: IMetadataMatcher): Promise<IEvent[]>;
@@ -33,15 +34,10 @@ export interface IEventStore {
   createStream(streamName: string): Promise<void>;
   hasStream(streamName: string): Promise<boolean>;
   deleteStream(streamName: string): Promise<void>;
-  createProjectionManager(): IProjectionManager
-  createRepository<T extends IAggregate>(
-    streamName: string,
-    aggregate: IAggregateConstructor<T>,
-    aggregateEvents: IEventConstructor[]
-  ): Repository<T>
-
-  getProjection<T extends IState = any>(name: string): IProjection<T>
-  getReadModelProjection<R extends IReadModel, T extends IState = any>(name: string): IReadModelProjection<R, T>
+  getProjectionManager(): IProjectionManager;
+  createRepository<T extends IAggregate>(streamName: string, aggregate: IAggregateConstructor<T>): IAggregateRepository<T>;
+  getProjector<T extends IState = any>(name: string): IProjector<T>;
+  getReadModelProjector<R extends IReadModel, T extends IState>(name: string): IReadModelProjector<R, T>;
 }
 
 export interface AggregateEventMap {
@@ -49,22 +45,17 @@ export interface AggregateEventMap {
 }
 
 export interface WriteLockStrategy {
-  createLock: (name: string) => Promise<void>
-  releaseLock: (name: string) => Promise<void>
-}
-
-export interface Repository<T extends IAggregate> {
-  save: (aggregate: T) => Promise<void>
-  get: (aggregateId: string) => Promise<T>
+  createLock: (name: string) => Promise<void>;
+  releaseLock: (name: string) => Promise<void>;
 }
 
 export interface Configuration {
-  connectionString: string,
-  projections?: IProjectionConstructor<any>[],
-  readModelProjections?: ReadModelProjectionConfiguration[],
-  aggregates?: IAggregateConstructor[],
-  middleware?: EventMiddleWare[]
-  driver: Driver
+  connectionString: string;
+  projections?: IProjectionConstructor<any>[];
+  readModelProjections?: ReadModelProjectionConfiguration[];
+  aggregates?: IAggregateConstructor[];
+  middleware?: EventMiddleWare[];
+  driver: Driver;
 }
 
 export interface ReadModelProjectionConfiguration<R extends IReadModel = IReadModel, T extends IState = IState> {
@@ -73,11 +64,9 @@ export interface ReadModelProjectionConfiguration<R extends IReadModel = IReadMo
 }
 
 export interface Options<D extends Driver = Driver.POSTGRES> {
-  connectionString: D extends Driver.POSTGRES ? string : never,
-  aggregates: IAggregateConstructor[];
+  connectionString: D extends Driver.POSTGRES ? string : never;
   middleware: EventMiddleWare[];
-  projections: IProjectionConstructor<IProjection<IState>>[];
-  readModelProjections: ReadModelProjectionConfiguration[];
+  registry: Registry;
 }
 
 export interface EventMetadata {
@@ -88,13 +77,7 @@ export interface EventMetadata {
 }
 
 export interface IEventConstructor<T = object> {
-  new (
-    _eventName: string,
-    _payload: T,
-    _metadata: EventMetadata,
-    _uuid?: string,
-    microtime?: number
-  ): IEvent;
+  new (_eventName: string, _payload: T, _metadata: EventMetadata, _uuid?: string, microtime?: number): IEvent;
 }
 
 export interface IEvent<T = object> {
@@ -104,22 +87,23 @@ export interface IEvent<T = object> {
   metadata: EventMetadata;
   createdAt: IDateTime;
 
-  withVersion(version: number): IEvent<T>
-  withAggregateType(type: string): IEvent<T>
-  withMetadata(metadata: EventMetadata): IEvent<T>
+  withVersion(version: number): IEvent<T>;
+  withAggregateType(type: string): IEvent<T>;
+  withMetadata(metadata: EventMetadata): IEvent<T>;
 }
 
 export enum EventAction {
   PRE_APPEND = 'PRE_APPEND',
+  APPEND_ERRORED = 'APPEND_ERRORED',
   APPENDED = 'APPENDED',
   LOADED = 'LOADED',
 }
 
-export type EventCallback = (event: IEvent) => IEvent;
+export type EventCallback = (event: IEvent, action: EventAction, eventStore: IEventStore) => IEvent | Promise<IEvent>;
 
 export interface EventMiddleWare {
-  action: EventAction
-  handler: EventCallback
+  action: EventAction;
+  handler: EventCallback;
 }
 
 export enum MetadataOperator {
@@ -131,17 +115,21 @@ export enum MetadataOperator {
   LOWER_THAN_EQUALS = '<=',
   NOT_EQUALS = '!=',
   NOT_IN = 'nin',
-  REGEX = 'regex'
+  REGEX = 'regex',
 }
 
 export enum FieldType {
-  METADATA= 'metadata',
-  MESSAGE_PROPERTY = 'message_property'
+  METADATA = 'metadata',
+  MESSAGE_PROPERTY = 'message_property',
 }
 
 export interface MetadataMatch<T extends MetadataOperator> {
   field: string;
-  value: T extends MetadataOperator.IN ? Array<string | number | Date> : T extends MetadataOperator.NOT_IN ? Array<string | number | Date> : string | number | Date | boolean;
+  value: T extends MetadataOperator.IN
+    ? Array<string | number | Date>
+    : T extends MetadataOperator.NOT_IN
+    ? Array<string | number | Date>
+    : string | number | Date | boolean;
   operation: T;
   fieldType: FieldType;
 }
@@ -149,7 +137,3 @@ export interface MetadataMatch<T extends MetadataOperator> {
 export interface IMetadataMatcher {
   data: MetadataMatch<MetadataOperator>[];
 }
-
-export * from './projection/types';
-export * from './aggregate/types';
-export * from './helper/types';

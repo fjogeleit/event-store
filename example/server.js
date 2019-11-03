@@ -3,7 +3,7 @@ const uuid = require('uuid/v4')
 const port = process.env.SERVER_PORT || 3000
 
 const eventLog = require('../dist/index')
-const config = require('../event-log.config')
+const config = require('../event-store.config')
 
 const User = require('./Model/User/user')
 const UserWasRegistered = require('./Model/User/Event/UserWasRegistered')
@@ -22,7 +22,7 @@ fastify.register((fastify, opts, next) => {
     .then(() => console.info(`${eventStore.constructor.name} installed`))
     .catch((e) => console.error('Error by prepare the IEventStore Tables', e))
 
-  const projectionManager = eventStore.createProjectionManager();
+  const projectionManager = eventStore.getProjectionManager();
 
   fastify.get('/user/:name/append', async (request, reply) => {
     try {
@@ -117,7 +117,7 @@ fastify.register((fastify, opts, next) => {
 
   fastify.get('/user/list', async (request, reply) => {
     try {
-      const projection = eventStore.getProjection('projection_users')
+      const projection = eventStore.getProjector('projection_users')
 
       return Object.values(await projection.run(false))
     } catch (e) {

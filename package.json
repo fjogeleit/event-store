@@ -1,6 +1,6 @@
 {
-  "name": "event-log",
-  "version": "1.0.0",
+  "name": "@fj/event-store",
+  "version": "0.1.0",
   "description": "Event Store",
   "author": "Frank Jogeleit <frank.jogeleit@web,de>",
   "license": "MIT",
@@ -31,8 +31,8 @@
     "ts-jest": "24.1.0",
     "typescript": "^3.6.4"
   },
-  "cli": {
-    "event-log": "./bin/event-log.js"
+  "bin": {
+    "event-store": "bin/event-store"
   },
   "lint-staged": {
     "*.ts": [

@@ -1,4 +1,5 @@
 export * from './projection';
 export * from './query';
-export * from './readModel';
-export * from './readModelProjection';
+export * from './read-model';
+export * from './read-model-projection';
+export * from './types';

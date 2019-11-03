@@ -20,7 +20,7 @@ program
   .version('0.1.0')
   .usage('--help')
   .description('CLI to manage Event Log streams')
-  .option('-c, --config <path>', 'Path to your event-log.config file', '../event-log.config.js')
+  .option('-c, --config <path>', 'Path to your event-store.config file', '../event-store.config.js')
 
 program
   .command('event-stream:create <streamName>')
@@ -59,24 +59,24 @@ program
     try {
       const eventStore = await getEventStore();
 
-      let projection = null;
+      let projector = null;
 
       try {
-        projection = eventStore.getProjection(name);
+        projector = eventStore.getProjector(name);
       } catch {
-        projection = eventStore.getReadModelProjection(name);
+        projector = eventStore.getReadModelProjector(name);
       }
 
-      const state = await projection.run(keepRunning)
+      await projector.run(keepRunning)
 
-      console.log(green(`Running the projection ${projection.constructor.projectionName} completed`))
+      console.log(green(`Running the projection ${name} completed`))
 
       if (showState) {
         console.log(`
         
 NEW STATE
 ====================================================================
-${util.inspect(state, false, null, true)}
+${util.inspect(projector.getState(), false, null, true)}
 ====================================================================
         `);
       }
@@ -91,17 +91,17 @@ program
   .action(async (name) => {
     try {
       const eventStore = await getEventStore();
-      let projection = null;
+      let projector = null;
 
       try {
-        projection = eventStore.getProjection(name);
+        projector = eventStore.getProjector(name);
       } catch {
-        projection = eventStore.getReadModelProjection(name);
+        projector = eventStore.getReadModelProjector(name);
       }
 
-      await projection.reset()
+      await projector.reset()
 
-      console.log(green(`Reset the projection ${projection.constructor.projectionName} completed`))
+      console.log(green(`Reset the projection ${name} completed`))
 
     } catch (error) {
       console.log(red(`Running the projection failed with ${error.toString()}`))
@@ -115,17 +115,17 @@ program
   .action(async (name, { deleteEmittedEvents }) => {
     try {
       const eventStore = await getEventStore();
-      let projection = null;
+      let projector = null;
 
       try {
-        projection = eventStore.getProjection(name);
+        projector = eventStore.getProjector(name);
       } catch {
-        projection = eventStore.getReadModelProjection(name);
+        projector = eventStore.getReadModelProjector(name);
       }
 
-      await projection.delete(deleteEmittedEvents)
+      await projector.delete(deleteEmittedEvents)
 
-      console.log(green(`Delete the projection ${projection.constructor.projectionName} completed`))
+      console.log(green(`Delete the projection ${name} completed`))
 
     } catch (error) {
       console.log(red(`Running the projection failed with ${error.toString()}`))

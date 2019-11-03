@@ -1,5 +1,5 @@
-import { Client, Identifiers, Values } from "./types";
-import { Pool } from "pg";
+import { Client, Identifiers, Values } from './types';
+import { Pool } from 'pg';
 const format = require('pg-format');
 
 let client: Pool = null;
@@ -44,7 +44,7 @@ export class SQLClient<T extends Pool = Pool> implements Client<T> {
 
     await this.dbClient.query(format(`UPDATE %I SET %s WHERE %s`, collection, setter, condition), [
       ...Object.values(values),
-      ...Object.values(identifiers)
+      ...Object.values(identifiers),
     ]);
   }
 }

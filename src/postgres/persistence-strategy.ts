@@ -1,44 +1,35 @@
-import {
-  FieldType,
-  IEvent,
-  IEventConstructor,
-  LoadStreamParameter,
-  IMetadataMatcher,
-  MetadataOperator,
-  Options,
-  WriteLockStrategy
-} from "../types";
+import { FieldType, IEvent, IEventConstructor, LoadStreamParameter, IMetadataMatcher, MetadataOperator, Options, WriteLockStrategy } from '../types';
 
-import { Pool, types } from "pg";
-import * as format from "pg-format";
-import { BaseEvent } from "../event";
-import { createPostgresClient } from "../helper";
-import { PostgresWriteLockStrategy } from "./writeLockStrategy";
-import { PersistenceStrategy } from "../eventStore";
-import { StreamAlreadyExists, StreamNotFound, ConcurrencyException } from "../exception";
-import { EVENT_STREAMS_TABLE, PROJECTIONS_TABLE } from "../index";
+import { Pool, types } from 'pg';
+import * as format from 'pg-format';
+import { BaseEvent } from '../event';
+import { createPostgresClient } from '../helper';
+import { PostgresWriteLockStrategy } from './write-lock-strategy';
+import { PersistenceStrategy } from '../event-store';
+import { StreamAlreadyExists, StreamNotFound, ConcurrencyException } from '../exception';
+import { EVENT_STREAMS_TABLE, PROJECTIONS_TABLE } from '../index';
 
-const sha1 = require("sha1");
+const sha1 = require('sha1');
 
 export const generateTable = (streamName: string): string => {
   return `_${sha1(streamName)}`;
 };
 
 const getTypeParser = (type, format) => {
-    if (type === types.builtins.TIMESTAMP) {
-        return (value) => {
-        const date = new Date(value);
+  if (type === types.builtins.TIMESTAMP) {
+    return value => {
+      const date = new Date(value);
 
-        const timeZone = -1 * date.getTimezoneOffset() * 60 * 1000;
+      const timeZone = -1 * date.getTimezoneOffset() * 60 * 1000;
 
-        return ((date.getTime() + timeZone) * 1000) + Number.parseInt(value.substring(-6));
-      }
-    }
+      return (date.getTime() + timeZone) * 1000 + Number.parseInt(value.substring(-6));
+    };
+  }
 
-  return types.getTypeParser(type, format)
+  return types.getTypeParser(type, format);
 };
 
-export class PostgresPersistenceStrategy implements PersistenceStrategy{
+export class PostgresPersistenceStrategy implements PersistenceStrategy {
   private readonly client: Pool;
   private readonly eventMap: { [aggregateEvent: string]: IEventConstructor };
   private readonly writeLock: WriteLockStrategy;
@@ -47,22 +38,20 @@ export class PostgresPersistenceStrategy implements PersistenceStrategy{
     this.client = createPostgresClient(options.connectionString);
     this.writeLock = new PostgresWriteLockStrategy(this.client);
 
-    this.eventMap = this.options.aggregates.reduce((eventMap, aggregate) => {
+    this.eventMap = this.options.registry.aggregates.reduce((eventMap, aggregate) => {
       const items = aggregate.registeredEvents().reduce<{ [aggregateEvent: string]: IEventConstructor }>((item, event) => {
         item[`${aggregate.name}:${event.name}`] = event;
 
         return item;
       }, {});
 
-      return { ...eventMap, ...items }
+      return { ...eventMap, ...items };
     }, {});
   }
 
   public async createEventStreamsTable() {
     try {
-      const result = await this.client.query('SELECT * FROM pg_catalog.pg_tables WHERE tablename = $1', [
-        EVENT_STREAMS_TABLE
-      ]);
+      const result = await this.client.query('SELECT * FROM pg_catalog.pg_tables WHERE tablename = $1', [EVENT_STREAMS_TABLE]);
 
       if (result.rowCount === 1) {
         return;
@@ -79,15 +68,13 @@ export class PostgresPersistenceStrategy implements PersistenceStrategy{
           );
       `);
     } catch (e) {
-      console.error('Failed to install EventStreams Table: %s', e.toString())
+      console.error('Failed to install EventStreams Table: %s', e.toString());
     }
-  };
+  }
 
   public async createProjectionsTable() {
     try {
-      const result = await this.client.query('SELECT * FROM pg_catalog.pg_tables WHERE tablename = $1', [
-        PROJECTIONS_TABLE
-      ]);
+      const result = await this.client.query('SELECT * FROM pg_catalog.pg_tables WHERE tablename = $1', [PROJECTIONS_TABLE]);
 
       if (result.rowCount === 1) {
         return;
@@ -106,41 +93,42 @@ export class PostgresPersistenceStrategy implements PersistenceStrategy{
           );
       `);
     } catch (e) {
-      console.error('Failed to install Projections Table: %s', e.toString())
+      console.error('Failed to install Projections Table: %s', e.toString());
     }
-  };
+  }
 
   public async addStreamToStreamsTable(streamName: string) {
     const tableName = generateTable(streamName);
 
     try {
       await this.client.query(`INSERT INTO ${EVENT_STREAMS_TABLE} (real_stream_name, stream_name, metadata) VALUES ($1, $2, $3)`, [
-        streamName, tableName, JSON.stringify([])
+        streamName,
+        tableName,
+        JSON.stringify([]),
       ]);
-
     } catch (error) {
       if (['23000', '23505'].includes(error.code)) {
-        throw StreamAlreadyExists.withName(streamName)
+        throw StreamAlreadyExists.withName(streamName);
       }
 
-      throw new Error(`Error ${error.code}: EventStream Table exists? ErrorDetails: ${error.toString()}`)
+      throw new Error(`Error ${error.code}: EventStream Table exists? ErrorDetails: ${error.toString()}`);
     }
-  };
+  }
 
   public async removeStreamFromStreamsTable(streamName: string) {
     await this.client.query(`DELETE FROM ${EVENT_STREAMS_TABLE} WHERE real_stream_name = $1`, [streamName]);
-  };
+  }
 
   public async hasStream(streamName: string) {
     const result = await this.client.query(`SELECT "no" FROM ${EVENT_STREAMS_TABLE} WHERE real_stream_name = $1`, [streamName]);
 
     return result.rowCount === 1;
-  };
+  }
 
   public async deleteStream(streamName: string) {
     await this.removeStreamFromStreamsTable(streamName);
     await this.dropSchema(streamName);
-  };
+  }
 
   public async createSchema(streamName: string) {
     const tableName = generateTable(streamName);
@@ -161,20 +149,22 @@ export class PostgresPersistenceStrategy implements PersistenceStrategy{
       );
     `);
 
-    await this.client.query(` CREATE UNIQUE INDEX ON ${tableName} ((metadata->>'_aggregate_type'), (metadata->>'_aggregate_id'), (metadata->>'_aggregate_version'));`);
+    await this.client.query(
+      ` CREATE UNIQUE INDEX ON ${tableName} ((metadata->>'_aggregate_type'), (metadata->>'_aggregate_id'), (metadata->>'_aggregate_version'));`
+    );
     await this.client.query(` CREATE UNIQUE INDEX ON ${tableName} ((metadata->>'_aggregate_type'), (metadata->>'_aggregate_id'), no);`);
-  };
+  }
 
   public async dropSchema(streamName: string) {
     const tableName = generateTable(streamName);
 
     await this.client.query(`DROP TABLE IF EXISTS ${tableName};`);
-  };
+  }
 
   public async appendTo<T = object>(streamName: string, events: IEvent<T>[]) {
     const tableName = generateTable(streamName);
 
-    const data = events.map((event) => [
+    const data = events.map(event => [
       event.uuid,
       event.name,
       JSON.stringify(event.payload),
@@ -186,19 +176,27 @@ export class PostgresPersistenceStrategy implements PersistenceStrategy{
 
     await this.writeLock.createLock(lock);
 
+    const client = await this.client.connect();
+
     try {
-      await this.client.query(format(`INSERT INTO ${ tableName } (event_id, event_name, payload, metadata, created_at) VALUES %L`, data))
+      await client.query('BEGIN');
+      await client.query(format(`INSERT INTO ${tableName} (event_id, event_name, payload, metadata, created_at) VALUES %L`, data));
+      await client.query('COMMIT');
     } catch (error) {
+      await client.query('ROLLBACK');
+
       if (['23000', '23505'].includes(error.code)) {
-        throw ConcurrencyException.with(error.message)
+        throw ConcurrencyException.with(error.message);
       }
 
       if (error.code !== '0000') {
-        throw ConcurrencyException.with(error.message)
+        throw ConcurrencyException.with(error.message);
       }
 
       throw error;
     } finally {
+      client.release();
+
       await this.writeLock.releaseLock(lock);
     }
   }
@@ -210,19 +208,13 @@ export class PostgresPersistenceStrategy implements PersistenceStrategy{
       text: query,
       values,
       // @ts-ignore
-      types: { getTypeParser }
+      types: { getTypeParser },
     });
 
     return rows.map<IEvent>(({ event_id, payload, event_name, metadata, created_at }) => {
       const EventConstructor = this.eventMap[`${metadata._aggregate_type}:${event_name}`] || BaseEvent;
 
-      return (new EventConstructor(
-        event_name,
-        payload,
-        metadata,
-        event_id,
-        created_at
-      ));
+      return new EventConstructor(event_name, payload, metadata, event_id, created_at);
     });
   }
 
@@ -252,19 +244,13 @@ export class PostgresPersistenceStrategy implements PersistenceStrategy{
       text: query,
       values: params,
       // @ts-ignore
-      types: { getTypeParser }
+      types: { getTypeParser },
     });
 
     return rows.map<IEvent>(({ event_id, payload, event_name, metadata, created_at, stream }: any) => {
       const EventConstructor = this.eventMap[`${metadata._aggregate_type}:${event_name}`] || BaseEvent;
 
-      return (new EventConstructor(
-        event_name,
-        payload,
-        { ...metadata, stream },
-        event_id,
-        created_at
-      ));
+      return new EventConstructor(event_name, payload, { ...metadata, stream }, event_id, created_at);
     });
   }
 
@@ -272,7 +258,7 @@ export class PostgresPersistenceStrategy implements PersistenceStrategy{
     const result = await this.client.query(`SELECT stream_name FROM ${EVENT_STREAMS_TABLE} WHERE real_stream_name = $1`, [streamName]);
 
     if (result.rowCount === 0) {
-      throw StreamNotFound.withName(streamName)
+      throw StreamNotFound.withName(streamName);
     }
 
     const tableName = generateTable(streamName);
@@ -284,16 +270,19 @@ export class PostgresPersistenceStrategy implements PersistenceStrategy{
 
     const whereCondition = `WHERE ${where.join(' AND ')}`;
 
-    return { query: `SELECT *, '${streamName}' as stream FROM ${tableName} ${whereCondition} ORDER BY no ASC`, values };
+    return {
+      query: `SELECT *, '${streamName}' as stream FROM ${tableName} ${whereCondition} ORDER BY no ASC`,
+      values,
+    };
   }
 
-  private createWhereClause(matcher?: IMetadataMatcher, paramCounter = 0): { where: string[], values: any[] } {
+  private createWhereClause(matcher?: IMetadataMatcher, paramCounter = 0): { where: string[]; values: any[] } {
     const where = [];
     const values = [];
 
     if (!matcher) return { where, values };
 
-    matcher.data.forEach((match) => {
+    matcher.data.forEach(match => {
       let expression = (value: string) => '';
 
       switch (match.operation) {
@@ -342,6 +331,6 @@ export class PostgresPersistenceStrategy implements PersistenceStrategy{
       }
     });
 
-    return { where, values }
+    return { where, values };
   }
 }

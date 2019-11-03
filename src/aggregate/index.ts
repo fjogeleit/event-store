@@ -1,2 +1,3 @@
 export * from './aggregate';
-export * from './aggregateRepository';
+export * from './aggregate-repository';
+export * from './types';

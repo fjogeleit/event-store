@@ -1,13 +1,17 @@
-import { IProjectionManager, IProjector, ProjectionStatus, IState, IStream, IEvent, IMetadataMatcher } from "../types";
-import { InMemoryEventStore } from "./eventStore";
-import { ProjectorException, ProjectionNotFound } from "../exception";
+import { IEvent, IMetadataMatcher } from '../';
+import { ProjectionStatus, IProjectionManager, IReadModel, IReadModelProjector, IState, IStream } from '../projection';
+
+import { InMemoryEventStore } from './event-store';
+import { ProjectorException, ProjectionNotFound } from '../exception';
 
 const cloneDeep = require('lodash.clonedeep');
 
-export class InMemoryProjector<T extends IState = IState> implements IProjector<T> {
+export class InMemoryReadModelProjector<R extends IReadModel, T extends IState = IState> implements IReadModelProjector<R, T> {
   private state?: T;
   private initHandler?: () => T;
-  private handlers?: { [event: string]: <R extends IEvent>(state: T, event: R) => T | Promise<T> };
+  private handlers?: {
+    [event: string]: <R extends IEvent>(state: T, event: R) => T | Promise<T>;
+  };
   private handler?: <R extends IEvent>(state: T, event: R) => T | Promise<T>;
   private metadataMatchers: { [streamName: string]: IMetadataMatcher } = {};
   private streamPositions: { [stream: string]: number } = {};
@@ -15,17 +19,27 @@ export class InMemoryProjector<T extends IState = IState> implements IProjector<
   private streamCreated: boolean = false;
   private isStopped: boolean = false;
 
-  private query: { all: boolean, streams: Array<string> } = { all: false, streams: [] };
+  private query: { all: boolean; streams: Array<string> } = {
+    all: false,
+    streams: [],
+  };
 
   constructor(
     private readonly name: string,
     private readonly manager: IProjectionManager,
     private readonly eventStore: InMemoryEventStore,
-    private readonly projections: { [projection: string]: { state: IState, positions: object, status: ProjectionStatus } },
+    private readonly projections: {
+      [projection: string]: {
+        state: IState;
+        positions: object;
+        status: ProjectionStatus;
+      };
+    },
+    public readonly readModel: R,
     private status: ProjectionStatus = ProjectionStatus.IDLE
   ) {}
 
-  init(callback: () => T): IProjector<T> {
+  init(callback: () => T): IReadModelProjector<R, T> {
     if (this.initHandler !== undefined) {
       throw ProjectorException.alreadyInitialized();
     }
@@ -38,7 +52,7 @@ export class InMemoryProjector<T extends IState = IState> implements IProjector<
     return this;
   }
 
-  fromAll(): IProjector<T> {
+  fromAll(): IReadModelProjector<R, T> {
     if (this.query.all || this.query.streams.length > 0) {
       throw ProjectorException.fromWasAlreadyCalled();
     }
@@ -48,7 +62,7 @@ export class InMemoryProjector<T extends IState = IState> implements IProjector<
     return this;
   }
 
-  fromStream(stream: IStream): IProjector<T> {
+  fromStream(stream: IStream): IReadModelProjector<R, T> {
     if (this.query.all || this.query.streams.length > 0) {
       throw ProjectorException.fromWasAlreadyCalled();
     }
@@ -59,12 +73,12 @@ export class InMemoryProjector<T extends IState = IState> implements IProjector<
     return this;
   }
 
-  fromStreams(...streams: IStream[]): IProjector<T> {
+  fromStreams(...streams: IStream[]): IReadModelProjector<R, T> {
     if (this.query.all || this.query.streams.length > 0) {
       throw ProjectorException.fromWasAlreadyCalled();
     }
 
-    this.query.streams = streams.map((stream) => stream.streamName);
+    this.query.streams = streams.map(stream => stream.streamName);
     this.metadataMatchers = streams.reduce((matchers, stream) => {
       matchers[stream.streamName] = stream.matcher;
 
@@ -74,7 +88,7 @@ export class InMemoryProjector<T extends IState = IState> implements IProjector<
     return this;
   }
 
-  when(handlers: { [p: string]: (state: T, event: IEvent) => T }): IProjector<T> {
+  when(handlers: { [p: string]: (state: T, event: IEvent) => T }): IReadModelProjector<R, T> {
     if (this.handler || this.handlers) {
       throw ProjectorException.whenWasAlreadyCalled();
     }
@@ -86,7 +100,7 @@ export class InMemoryProjector<T extends IState = IState> implements IProjector<
     return this;
   }
 
-  whenAny(handler: (state: T, event: IEvent) => T): IProjector<T> {
+  whenAny(handler: (state: T, event: IEvent) => T): IReadModelProjector<R, T> {
     if (this.handler || this.handlers) {
       throw ProjectorException.whenWasAlreadyCalled();
     }
@@ -115,18 +129,18 @@ export class InMemoryProjector<T extends IState = IState> implements IProjector<
     await this.eventStore.appendTo(this.name, [event]);
   }
 
-  async delete(deleteEmittedEvents: boolean = false): Promise<void> {
+  async delete(deleteProjection: boolean = true): Promise<void> {
     delete this.projections[this.name];
-
-    if (deleteEmittedEvents) {
-      await this.eventStore.deleteStream(this.name)
-    }
 
     this.isStopped = true;
     this.state = undefined;
 
     if (this.initHandler !== undefined) {
-      this.state = this.initHandler()
+      this.state = this.initHandler();
+    }
+
+    if (deleteProjection) {
+      await this.readModel.delete();
     }
 
     this.streamPositions = {};
@@ -134,19 +148,20 @@ export class InMemoryProjector<T extends IState = IState> implements IProjector<
 
   async reset(): Promise<void> {
     this.streamPositions = {};
+    await this.readModel.reset();
     this.state = undefined;
 
     if (this.initHandler !== undefined) {
-      this.state = this.initHandler()
+      this.state = this.initHandler();
     }
 
     this.projections[this.name] = {
       state: {},
       positions: this.streamPositions,
-      status: ProjectionStatus.IDLE
+      status: ProjectionStatus.IDLE,
     };
 
-    await this.eventStore.deleteStream(this.name)
+    await this.eventStore.deleteStream(this.name);
   }
 
   async stop(): Promise<void> {
@@ -176,7 +191,7 @@ export class InMemoryProjector<T extends IState = IState> implements IProjector<
       throw ProjectorException.stateWasNotInitialised();
     }
 
-    switch(await this.fetchRemoteStatus()) {
+    switch (await this.fetchRemoteStatus()) {
       case ProjectionStatus.STOPPING:
         await this.load();
         await this.stop();
@@ -196,8 +211,12 @@ export class InMemoryProjector<T extends IState = IState> implements IProjector<
         break;
     }
 
-    if (await this.projectionExists() === false) {
+    if ((await this.projectionExists()) === false) {
       await this.createProjection();
+    }
+
+    if ((await this.readModel.isInitialized()) === false) {
+      await this.readModel.init();
     }
 
     await this.prepareStreamPosition();
@@ -206,11 +225,13 @@ export class InMemoryProjector<T extends IState = IState> implements IProjector<
     this.isStopped = false;
 
     do {
-      const evenStream = await this.eventStore.mergeAndLoad(...Object.entries(this.streamPositions).map(([streamName, position]) => ({
-        streamName,
-        fromNumber: position + 1,
-        matcher: this.metadataMatchers[streamName]
-      })));
+      const evenStream = await this.eventStore.mergeAndLoad(
+        ...Object.entries(this.streamPositions).map(([streamName, position]) => ({
+          streamName,
+          fromNumber: position + 1,
+          matcher: this.metadataMatchers[streamName],
+        }))
+      );
 
       if (this.handler) {
         await this.handleStreamWithSingleHandler(evenStream);
@@ -218,7 +239,7 @@ export class InMemoryProjector<T extends IState = IState> implements IProjector<
         await this.handleStreamWithHandlers(evenStream);
       }
 
-      switch(await this.fetchRemoteStatus()) {
+      switch (await this.fetchRemoteStatus()) {
         case ProjectionStatus.STOPPING:
           await this.stop();
           break;
@@ -238,8 +259,15 @@ export class InMemoryProjector<T extends IState = IState> implements IProjector<
       }
 
       await this.prepareStreamPosition();
-
     } while (keepRunning && !this.isStopped);
+  }
+
+  public progressEvent(event: string): boolean {
+    if (this.handler) {
+      return true;
+    }
+
+    return Object.keys(this.handlers).includes(event);
   }
 
   private async handleStreamWithSingleHandler(eventStreams: IEvent[]) {
@@ -275,10 +303,12 @@ export class InMemoryProjector<T extends IState = IState> implements IProjector<
   }
 
   private async persist(): Promise<void> {
+    await this.readModel.persist();
+
     this.projections[this.name] = {
       ...this.projections[this.name],
       state: this.state || {},
-      positions: this.streamPositions
+      positions: this.streamPositions,
     };
   }
 
@@ -319,8 +349,8 @@ export class InMemoryProjector<T extends IState = IState> implements IProjector<
 
   private async fetchRemoteStatus(): Promise<ProjectionStatus> {
     try {
-      return await this.manager.fetchProjectionStatus(this.name)
-    } catch(e) {
+      return await this.manager.fetchProjectionStatus(this.name);
+    } catch (e) {
       return ProjectionStatus.RUNNING;
     }
   }
@@ -334,7 +364,7 @@ export class InMemoryProjector<T extends IState = IState> implements IProjector<
 
     this.projections[this.name] = {
       ...this.projections[this.name],
-      status: ProjectionStatus.RUNNING
+      status: ProjectionStatus.RUNNING,
     };
 
     this.status = ProjectionStatus.RUNNING;
@@ -348,7 +378,7 @@ export class InMemoryProjector<T extends IState = IState> implements IProjector<
     this.projections[this.name] = {
       state: {},
       positions: {},
-      status: ProjectionStatus.IDLE
+      status: ProjectionStatus.IDLE,
     };
   }
 }

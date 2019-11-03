@@ -1,7 +1,7 @@
-import { IReadModel } from "./types";
+import { IReadModel } from './types';
 
-export abstract class ReadModel implements IReadModel {
-  private stacks: Array<{ method: string, args: any[][] }> = [];
+export abstract class AbstractReadModel implements IReadModel {
+  private stacks: Array<{ method: string; args: any[][] }> = [];
 
   public abstract init(): Promise<void>;
   public abstract isInitialized(): Promise<boolean>;

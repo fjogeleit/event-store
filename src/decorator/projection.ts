@@ -1,11 +1,9 @@
-import { IProjectionConstructor } from "../types";
+import { IProjectionConstructor } from '../projection';
+import { PROJECTION } from './constants';
+import { Registry } from '../registry';
 
-const projections: IProjectionConstructor[] = [];
-
-export const projectionMap = () => projections;
-
-export const ProjectionConfig = (name: string) => (target: IProjectionConstructor<any>) =>  {
+export const Projection = (name: string) => (target: IProjectionConstructor<any>) => {
   target.projectionName = name;
 
-  projections.push(target)
+  Reflect.defineMetadata(PROJECTION, [...(Reflect.getMetadata(PROJECTION, Registry) || []), target], Registry);
 };

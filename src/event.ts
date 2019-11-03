@@ -1,6 +1,6 @@
-import { EventMetadata, IDateTime, IEvent } from "./types";
+import { EventMetadata, IEvent } from './types';
+import { DateTime, IDateTime } from './helper';
 import * as uuid from 'uuid/v4';
-import { DateTime } from "./helper";
 
 const microtime = require('microtime');
 
@@ -10,9 +10,8 @@ export class BaseEvent<T = object> implements IEvent<T> {
     protected readonly _payload: T,
     protected readonly _metadata: EventMetadata,
     protected readonly _uuid: string = uuid(),
-    protected readonly _microtime: number = microtime.now(),
-  ) {
-  }
+    protected readonly _microtime: number = microtime.now()
+  ) {}
 
   get uuid() {
     return this._uuid;
@@ -43,7 +42,13 @@ export class BaseEvent<T = object> implements IEvent<T> {
   }
 
   public withVersion(version: number): IEvent<T> {
-    return new (this.constructor as any)(this._eventName, this._payload, { ...this._metadata, _aggregate_version: version }, this._uuid, this._microtime);
+    return new (this.constructor as any)(
+      this._eventName,
+      this._payload,
+      { ...this._metadata, _aggregate_version: version },
+      this._uuid,
+      this._microtime
+    );
   }
 
   public withAggregateType(type: string): IEvent<T> {
@@ -58,15 +63,15 @@ export class BaseEvent<T = object> implements IEvent<T> {
     return new (this.constructor as any)(this._eventName, this._payload, { ...this._metadata, [key]: value }, this._uuid, this._microtime);
   }
 
-  public static occur(
-    _aggregateId: string,
-    _payload: object,
-    _uuid: string = uuid(),
-    _microtime: number = microtime.now()
-  ) {
+  public static occur(_aggregateId: string, _payload: object, _uuid: string = uuid(), _microtime: number = microtime.now()) {
     return new (this as any)(
-      this.name, _payload,
-      { _aggregate_id: _aggregateId, _aggregate_type: '', _aggregate_version: 1 },
+      this.name,
+      _payload,
+      {
+        _aggregate_id: _aggregateId,
+        _aggregate_type: '',
+        _aggregate_version: 1,
+      },
       _uuid,
       _microtime
     );
