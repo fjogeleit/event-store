@@ -13,24 +13,38 @@ export const createPostgresClient = (connectionString: string): Pool => {
 };
 
 export class PostgresClient<T extends Pool = Pool> implements Client<T> {
-  constructor(private readonly dbClient: T) {}
+  constructor(private readonly client: T) {}
 
   get connection(): T {
-    return this.dbClient;
+    return this.client;
+  }
+
+  async exists(collection: string): Promise<boolean> {
+    const result = await this.client.query(`SELECT * FROM pg_catalog.pg_tables WHERE tablename = '${collection}';`);
+
+    return result.rowCount === 1;
+  }
+
+  async delete(collection: string): Promise<void> {
+    await this.client.query(`DROP TABLE IF EXISTS '${collection}';`);
+  }
+
+  async reset(collection: string): Promise<void> {
+    await this.client.query(`TRUNCATE TABLE '${collection}';`);
   }
 
   async insert(collection: string, values: Values) {
     const columns = Object.keys(values);
 
-    await this.dbClient.query(format(`INSERT INTO %I (%s) VALUES (%L)`, collection, columns.join(','), Object.values(values)));
+    await this.client.query(format(`INSERT INTO %I (%s) VALUES (%L)`, collection, columns.join(','), Object.values(values)));
   }
 
-  async delete(collection: string, identifiers: Identifiers) {
+  async remove(collection: string, identifiers: Identifiers) {
     const condition = Object.keys(identifiers).map((column, index) => {
       return `"${column}" = $${++index}`;
     });
 
-    await this.dbClient.query(format(`DELETE FROM %I WHERE %s `, collection, condition), Object.values(identifiers));
+    await this.client.query(format(`DELETE FROM %I WHERE %s `, collection, condition), Object.values(identifiers));
   }
 
   async update(collection: string, values: any[], identifiers: any[]) {
@@ -42,7 +56,7 @@ export class PostgresClient<T extends Pool = Pool> implements Client<T> {
       return `"${column}" = $${++index + setter.length}`;
     });
 
-    await this.dbClient.query(format(`UPDATE %I SET %s WHERE %s`, collection, setter, condition), [
+    await this.client.query(format(`UPDATE %I SET %s WHERE %s`, collection, setter, condition), [
       ...Object.values(values),
       ...Object.values(identifiers),
     ]);

@@ -131,7 +131,7 @@ export class MysqlProjector<T extends IState = IState> implements IProjector<T> 
   async delete(deleteEmittedEvents: boolean = false): Promise<void> {
     const result = await promisifyQuery<number>(
       this.client,
-      `DELETE FROM ${PROJECTIONS_TABLE} WHERE "name" = ?`,
+      `DELETE FROM ${PROJECTIONS_TABLE} WHERE name = ?`,
       [this.name],
       (result) => result.affectedRows
     );
@@ -163,7 +163,7 @@ export class MysqlProjector<T extends IState = IState> implements IProjector<T> 
     }
 
     const result = await promisifyQuery<number>(
-      this.client, `UPDATE ${PROJECTIONS_TABLE} SET status = ?, state = ?, position = ? WHERE "name" = ?`,[
+      this.client, `UPDATE ${PROJECTIONS_TABLE} SET status = ?, state = ?, position = ? WHERE name = ?`,[
         ProjectionStatus.IDLE,
         JSON.stringify(this.state || {}),
         JSON.stringify(this.streamPositions),
@@ -437,7 +437,7 @@ export class MysqlProjector<T extends IState = IState> implements IProjector<T> 
 
     const result = await promisifyQuery<number>(
       this.client,
-      `UPDATE ${PROJECTIONS_TABLE} SET locked_until = ?, status = ? WHERE "name" = ?`,[
+      `UPDATE ${PROJECTIONS_TABLE} SET locked_until = ?, status = ? WHERE name = ?`,[
         this.createLockUntil(now),
         ProjectionStatus.RUNNING,
         this.name,

@@ -13,9 +13,13 @@ export interface IDateTimeConstructor {
 export interface Client<T> {
   readonly connection: T;
 
+  exists(collection: string): Promise<boolean>
+  delete(collection: string): Promise<void>
+  reset(collection: string): Promise<void>
+
   insert(collection: string, values: Values): Promise<void>;
   update(collection: string, values: Values, identifiers: Identifiers): Promise<void>;
-  delete(collection: string, identifiers: Identifiers): Promise<void>;
+  remove(collection: string, identifiers: Identifiers): Promise<void>;
 }
 
 export interface MysqlConfiguration {

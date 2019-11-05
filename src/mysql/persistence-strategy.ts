@@ -215,9 +215,11 @@ export class MysqlPersistenceStrategy implements PersistenceStrategy {
             connection.query(`INSERT INTO ${ tableName } SET ?`, data, (error) => {
               if (error) {
                 connection.rollback(error => {
+                  connection.release();
                   reject(error);
                 });
 
+                connection.release();
                 reject(error);
                 return;
               }
@@ -225,17 +227,20 @@ export class MysqlPersistenceStrategy implements PersistenceStrategy {
               connection.commit((error) => {
                 if (error) {
                   connection.rollback(error => {
+                    connection.release();
                     reject(error);
                   });
 
+                  connection.release();
                   reject(error);
                   return;
                 }
 
+                connection.release();
                 resolve();
               });
             })
-          })
+          });
         });
       });
     } catch (error) {

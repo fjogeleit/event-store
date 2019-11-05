@@ -132,7 +132,7 @@ export class MysqlReadModelProjector<R extends IReadModel, T extends IState = IS
   async delete(deleteProjection: boolean = true): Promise<void> {
     const result = await promisifyQuery<number>(
       this.client,
-      `DELETE FROM ${PROJECTIONS_TABLE} WHERE "name" = ?`,
+      `DELETE FROM ${PROJECTIONS_TABLE} WHERE name = ?`,
       [this.name],
       (result) => result.affectedRows
     );
@@ -165,7 +165,7 @@ export class MysqlReadModelProjector<R extends IReadModel, T extends IState = IS
     }
 
     const result = await promisifyQuery<number>(
-      this.client, `UPDATE ${PROJECTIONS_TABLE} SET status = ?, state = ?, position = ? WHERE "name" = ?`,[
+      this.client, `UPDATE ${PROJECTIONS_TABLE} SET status = ?, state = ?, position = ? WHERE name = ?`,[
         ProjectionStatus.IDLE,
         JSON.stringify(this.state || {}),
         JSON.stringify(this.streamPositions),
@@ -356,7 +356,7 @@ export class MysqlReadModelProjector<R extends IReadModel, T extends IState = IS
 
     const result = await promisifyQuery<number>(
       this.client,
-      `UPDATE ${PROJECTIONS_TABLE} SET locked_until = ?, state = ?, position = ? WHERE "name" = ?`,[
+      `UPDATE ${PROJECTIONS_TABLE} SET locked_until = ?, state = ?, position = ? WHERE name = ?`,[
         this.createLockUntil(new Date()),
         JSON.stringify(this.state || {}),
         JSON.stringify(this.streamPositions),
@@ -446,7 +446,7 @@ export class MysqlReadModelProjector<R extends IReadModel, T extends IState = IS
 
     const result = await promisifyQuery<number>(
       this.client,
-      `UPDATE ${PROJECTIONS_TABLE} SET locked_until = ?, status = ? WHERE "name" = ?`,[
+      `UPDATE ${PROJECTIONS_TABLE} SET locked_until = ?, status = ? WHERE name = ?`,[
         this.createLockUntil(now),
         ProjectionStatus.RUNNING,
         this.name,

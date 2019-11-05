@@ -1,5 +1,6 @@
 import { Client, Identifiers, Values, MysqlConfiguration } from './types';
 import { Pool, createPool } from 'mysql';
+import { EVENT_STREAMS_TABLE } from "../index";
 
 let client: Pool = null;
 
@@ -29,23 +30,42 @@ export const promisifyQuery = <T>(client: Pool, query, values, resultFn?: (resul
 };
 
 export class MySQLClient<T extends Pool = Pool> implements Client<T> {
-  constructor(private readonly dbClient: T) {}
+  constructor(private readonly client: T) {}
 
   get connection(): T {
-    return this.dbClient;
+    return this.client;
+  }
+
+  async exists(collection: string): Promise<boolean> {
+    const result = await promisifyQuery<number>(
+      this.client,
+      'SHOW TABLES LIKE ?',
+      [collection],
+      (result: Array<any>) => result.length
+    );
+
+    return result === 1;
+  }
+
+  async reset(collection: string) {
+    await promisifyQuery<void>(this.client, `TRUNCATE TABLE ${collection};`, [], () => {});
+  }
+
+  async delete(collection: string) {
+    await promisifyQuery<void>(this.client, `DROP TABLE IF EXISTS ${collection};`, [], () => {});
   }
 
   insert(collection: string, values: Values) {
-    return promisifyQuery<void>(this.dbClient, `INSERT INTO ${collection} SET ?`, values, () => {});
+    return promisifyQuery<void>(this.client, `INSERT INTO ${collection} SET ?`, values, () => {});
   }
 
-  delete(collection: string, identifiers: Identifiers) {
+  remove(collection: string, identifiers: Identifiers) {
     const condition = Object.keys(identifiers).map((column) => {
-      return `"${column}" = ?`;
+      return `${column} = ?`;
     });
 
     return promisifyQuery<void>(
-      this.dbClient,
+      this.client,
       `DELETE FROM ${collection} WHERE ${condition}`,
       Object.values(identifiers),
       () => {}
@@ -54,15 +74,15 @@ export class MySQLClient<T extends Pool = Pool> implements Client<T> {
 
   async update(collection: string, values: any[], identifiers: any[]) {
     const setter = Object.keys(values).map((column) => {
-      return `"${column}" = ?`;
+      return `${column} = ?`;
     });
 
     const condition = Object.keys(identifiers).map((column) => {
-      return `"${column}" = ?`;
+      return `${column} = ?`;
     });
 
     return promisifyQuery<void>(
-      this.dbClient,
+      this.client,
       `UPDATE ${collection} SET ${setter} WHERE ${condition}`,
       [...Object.values(values), ...Object.values(identifiers)],
       () => {}
