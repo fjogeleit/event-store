@@ -22,6 +22,15 @@ This EventStore also ships with `Decorators` to simplify configuration.
 
 The following descriptions using TypeScript. The integrated example serve using normal JavaScript for reference.
 
+## Example Project based on [NestJS](https://github.com/nestjs/nest)
+
+[FJ EventStore Example](https://github.com/fjogeleit/event-store-example) is a base Project with an example integration in the NodeJS Framework NestJS. The Example includes different APIs to show you the basic features like:
+* Implementing Aggregates, Events, Projection, Repositories and so on
+* Create and persist a new Aggregate
+* Update an existing Aggregate
+
+For a basic overview you can use the code snippets from this example project below
+
 ## Initialise the EventStore
 
 ### Create the EventStore in your Backend
