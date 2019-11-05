@@ -14,6 +14,7 @@ import { IAggregate, IAggregateConstructor, AggregateRepository } from './aggreg
 import { ProjectionNotFound } from './exception';
 
 interface MiddlewareCollection {
+  [EventAction.APPEND_ERRORED]: EventCallback[];
   [EventAction.PRE_APPEND]: EventCallback[];
   [EventAction.APPENDED]: EventCallback[];
   [EventAction.LOADED]: EventCallback[];
@@ -45,6 +46,7 @@ export abstract class EventStore implements IEventStore {
   public repositories = [];
 
   protected readonly middleware: MiddlewareCollection = {
+    [EventAction.APPEND_ERRORED]: [],
     [EventAction.PRE_APPEND]: [],
     [EventAction.APPENDED]: [],
     [EventAction.LOADED]: [],

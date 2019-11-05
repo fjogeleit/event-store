@@ -12,7 +12,7 @@ export const createPostgresClient = (connectionString: string): Pool => {
   return client;
 };
 
-export class SQLClient<T extends Pool = Pool> implements Client<T> {
+export class PostgresClient<T extends Pool = Pool> implements Client<T> {
   constructor(private readonly dbClient: T) {}
 
   get connection(): T {

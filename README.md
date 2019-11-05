@@ -34,7 +34,7 @@ import { createEventStore } from 'fj-event-store';
 const eventStore = createEventStore({
   // Postgres ConnectionString  
   connectionString: 'postgres://user:password@localhost:5432/event-store',
-  // Driver, possible options are "postgres" (default) and "in_memory"
+  // Driver, possible options are "postgres" (default), "mysql" and "in_memory"
   driver: 'postgres'
 });
 

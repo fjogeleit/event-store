@@ -7,7 +7,7 @@ const USER_TABLE = `app_users`;
 
 class UserTableReadModel extends AbstractReadModel {
   /**
-   * @param {SQLClient} client
+   * @param {PostgresClient} client
    */
   constructor(client) {
     super();

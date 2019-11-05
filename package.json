@@ -45,7 +45,9 @@
   },
   "peerDependencies": {
     "@types/pg": "^7.11.2",
-    "pg": "^7.12.1"
+    "@types/mysql": "^2.15.7",
+    "pg": "^7.12.1",
+    "mysql": "^2.17.1"
   },
   "dependencies": {
     "commander": "^3.0.2",

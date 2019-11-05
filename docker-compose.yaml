@@ -9,3 +9,14 @@ services:
             - POSTGRES_USER=user
             - POSTGRES_PASSWORD=password
             - TZ=Europe/Berlin
+
+    mysql:
+        image: 'mysql:8.0.18'
+        command: --default-authentication-plugin=mysql_native_password
+        ports: ['3306:3306']
+        environment:
+            - MYSQL_DATABASE=event-store
+            - MYSQL_USER=user
+            - MYSQL_PASSWORD=password
+            - MYSQL_ROOT_PASSWORD=password
+            - TZ=Europe/Berlin

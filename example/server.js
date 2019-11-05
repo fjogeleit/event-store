@@ -1,6 +1,6 @@
 const fastify = require('fastify')()
 const uuid = require('uuid/v4')
-const port = 3000
+const port = 2000
 
 const { createEventStore } = require('../dist/index')
 const config = require('../event-store.config')

@@ -7,13 +7,14 @@ import {
   IReadModelProjector,
   IState,
 } from './projection';
-import { IDateTime } from './helper';
+import { IDateTime, MysqlConfiguration } from './helper';
 import { IAggregate, IAggregateConstructor, IAggregateRepository } from './aggregate';
 import { Registry } from './registry';
 
 export enum Driver {
   POSTGRES = 'postgres',
   IN_MEMORY = 'in_memory',
+  MYSQL = 'mysql',
 }
 
 export interface LoadStreamParameter {
@@ -45,12 +46,13 @@ export interface AggregateEventMap {
 }
 
 export interface WriteLockStrategy {
-  createLock: (name: string) => Promise<void>;
-  releaseLock: (name: string) => Promise<void>;
+  createLock: (name: string) => Promise<boolean>;
+  releaseLock: (name: string) => Promise<boolean>;
 }
 
 export interface Configuration {
   connectionString: string;
+  connection: MysqlConfiguration;
   projections?: IProjectionConstructor<any>[];
   readModelProjections?: ReadModelProjectionConfiguration[];
   aggregates?: IAggregateConstructor[];
@@ -64,7 +66,8 @@ export interface ReadModelProjectionConfiguration<R extends IReadModel = IReadMo
 }
 
 export interface Options<D extends Driver = Driver.POSTGRES> {
-  connectionString: D extends Driver.POSTGRES ? string : never;
+  connectionString?: string;
+  connection?: MysqlConfiguration;
   middleware: EventMiddleWare[];
   registry: Registry;
 }

@@ -6,9 +6,13 @@ export class PostgresWriteLockStrategy implements WriteLockStrategy {
 
   public async createLock(name: string) {
     await this.client.query(`select pg_advisory_lock(hashtext('${name}'));`);
+
+    return true;
   }
 
   public async releaseLock(name: string) {
     await this.client.query(`select pg_advisory_unlock(hashtext('${name}'));`);
+
+    return true;
   }
 }

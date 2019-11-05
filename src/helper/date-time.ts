@@ -22,4 +22,10 @@ export class DateTime implements IDateTime {
       .toUTCString()
       .replace(' GMT', '')}.${this._microtime.toString().substr(-6)}`;
   }
+
+  toISOString() {
+    const iso = this.toDate().toISOString();
+
+    return `${iso.substr(0, iso.length - 5)}.${this._microtime.toString().substr(-6)}`;
+  }
 }

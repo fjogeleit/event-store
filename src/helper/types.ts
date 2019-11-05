@@ -1,6 +1,7 @@
 export interface IDateTime {
   microtime: number;
   toString(): string;
+  toISOString(): string;
   toDate(): Date;
 }
 
@@ -15,6 +16,14 @@ export interface Client<T> {
   insert(collection: string, values: Values): Promise<void>;
   update(collection: string, values: Values, identifiers: Identifiers): Promise<void>;
   delete(collection: string, identifiers: Identifiers): Promise<void>;
+}
+
+export interface MysqlConfiguration {
+  host: string;
+  user: string;
+  password: string;
+  database: string;
+  port: number;
 }
 
 export interface Values {
