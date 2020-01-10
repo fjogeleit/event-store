@@ -7,7 +7,7 @@ const USER_TABLE = `app_users`;
 
 class UserTableReadModel extends AbstractReadModel {
   /**
-   * @param {PostgresClient} client
+   * @param {MySQLClient} client
    */
   constructor(client) {
     super();
@@ -17,7 +17,7 @@ class UserTableReadModel extends AbstractReadModel {
   async init() {
     await this.client.connection.query(`
         CREATE TABLE ${USER_TABLE} (
-            id UUID NOT NULL,
+            id VARCHAR(50) NOT NULL,
             username VARCHAR(255) NOT NULL,
             password VARCHAR(255) NOT NULL,
             PRIMARY KEY (id)
@@ -26,17 +26,15 @@ class UserTableReadModel extends AbstractReadModel {
   }
 
   async isInitialized() {
-    const result = await this.client.connection.query(`SELECT * FROM pg_catalog.pg_tables WHERE tablename = '${USER_TABLE}';`);
-
-    return result.rowCount === 1;
+    return await this.client.exists(USER_TABLE);
   }
 
   async reset() {
-    await this.client.connection.query(`TRUNCATE TABLE '${USER_TABLE}';`);
+    await this.client.reset(USER_TABLE);
   }
 
   async delete() {
-    await this.client.connection.query(`DROP TABLE IF EXISTS '${USER_TABLE}';`);
+    await this.client.delete(USER_TABLE);
   }
 
   async insert(values) {

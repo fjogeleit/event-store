@@ -276,9 +276,13 @@ Commands:
 
 ### Requirements
 
-1. A running Postgres DB. - You can yous the docker-compose.yaml to start one over docker
+1. A running Postgres DB - You can use the docker-compose.yaml to start a postgres instance as docker container.
 
-2. Create your .env File under `./example`. - You can copy and rename the `.env.default` to `.env and change the values to your configuration
+```
+docker-compose up -d postgres
+```
+
+2. Create your .env File under `./example`. You can copy and rename the `.env.default` to `.env` and change the values to your configuration
 
 3. Make the CLI Tool executable with the following command `chmod +x bin/event-store`
 

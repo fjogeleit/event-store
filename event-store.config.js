@@ -2,13 +2,18 @@ const User = require('./example/model/user/user')
 const Comment = require('./example/model/comment/comment')
 const UserListProjection = require('./example/projection/user-list')
 const { UserTableProjection, UserTableReadModel } = require('./example/projection/user-table')
-const { PostgresClient } = require('./dist/helper/postgres')
-const { Pool } = require('pg')
+const { MySQLClient } = require('./dist/helper/mysql')
+const { createPool } = require('mysql')
 
-const connection = new Pool({ connectionString: process.env.POSTGRES_CONNECTION });
+const connection = createPool({
+  user: 'user',
+  password: 'password',
+  host: 'localhost',
+  database: 'event-store'
+});
 
 module.exports = {
-  driver: 'postgres',
+  driver: 'mysql',
   connectionString: 'postgres://user:password@localhost/event-store',
   connection: {
     user: 'user',
@@ -28,7 +33,7 @@ module.exports = {
   readModelProjections: [
     {
       projection: UserTableProjection,
-      readModel: new UserTableReadModel(new PostgresClient(connection))
+      readModel: new UserTableReadModel(new MySQLClient(connection))
     }
   ]
 }
