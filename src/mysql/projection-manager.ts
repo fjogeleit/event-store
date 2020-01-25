@@ -1,7 +1,7 @@
 import { Pool } from 'mysql';
-import { MysqlConfiguration, PROJECTIONS_TABLE } from '../index';
+import { PROJECTIONS_TABLE } from '../index';
 import { MysqlProjector } from './projector';
-import { createMysqlPool, promisifyQuery } from '../helper';
+import { createMysqlPool, promisifyQuery, MysqlParameter } from '../helper';
 import { MysqlReadModelProjector } from './read-model-projector';
 import { ProjectionNotFound } from '../exception';
 import { IEventStore } from '../types';
@@ -10,7 +10,7 @@ import { Query, IProjectionManager, ProjectionStatus, IProjector, IQuery, IState
 export class MysqlProjectionManager implements IProjectionManager {
   private readonly client: Pool;
 
-  constructor(readonly connection: MysqlConfiguration, private readonly eventStore: IEventStore) {
+  constructor(readonly connection: MysqlParameter, private readonly eventStore: IEventStore) {
     this.client = createMysqlPool(connection);
   }
 

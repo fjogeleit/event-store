@@ -80,9 +80,8 @@ describe('middleware/logger', () => {
   beforeEach(async done => {
     eventStore = createEventStore({
       driver: Driver.IN_MEMORY,
-      connectionString: '',
       middleware: [{ action: EventAction.LOADED, handler: loggerMiddleware(console) }],
-    }) as InMemoryEventStore;
+    });
 
     await eventStore.install();
     await eventStore.createStream('users');

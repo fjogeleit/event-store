@@ -12,8 +12,7 @@ describe('inMemory/eventStore', () => {
   beforeEach(async next => {
     eventStore = createEventStore({
       driver: Driver.IN_MEMORY,
-      connectionString: '',
-    }) as InMemoryEventStore;
+    });
 
     await eventStore.install();
 

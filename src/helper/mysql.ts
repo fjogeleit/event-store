@@ -1,10 +1,10 @@
-import { Client, Identifiers, Values, MysqlConfiguration } from './types';
+import { Client, Identifiers, Values, MysqlParameter } from './types';
 import { Pool, createPool } from 'mysql';
 import { EVENT_STREAMS_TABLE } from "../index";
 
 let client: Pool = null;
 
-export const createMysqlPool = ({ host, user, password, database, port }: MysqlConfiguration): Pool => {
+export const createMysqlPool = ({ host, user, password, database, port }: MysqlParameter): Pool => {
   if (!client) {
     client = createPool({ user, password, host, database, port, dateStrings: true });
   }

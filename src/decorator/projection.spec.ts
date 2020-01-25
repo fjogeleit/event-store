@@ -1,6 +1,5 @@
 import { UserNameWasUpdated, UserWasRegistered } from '../../test/model/user';
 import { createEventStore } from '../index';
-import { InMemoryEventStore } from '../in-memory';
 import { AbstractProjection, IProjectionConstructor } from '../projection';
 import { Driver } from '../types';
 import { Projection } from './projection';
@@ -36,8 +35,7 @@ describe('decorator/projection', () => {
   it('finds decorated projections and add the defined name to the constructor', done => {
     const eventStore = createEventStore({
       driver: Driver.IN_MEMORY,
-      connectionString: '',
-    }) as InMemoryEventStore;
+    });
 
     const projector = eventStore.getProjector<UserListProjection>('user_list');
 

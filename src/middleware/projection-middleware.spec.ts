@@ -1,7 +1,6 @@
 import { AbstractAggregate } from '../aggregate';
 import { BaseEvent } from '../event';
 import { createEventStore } from '../index';
-import { InMemoryEventStore } from '../in-memory';
 import { Driver, EventAction, IEventStore } from '../types';
 import { Aggregate, Projection } from '../decorator';
 import * as uuid from 'uuid/v4';
@@ -96,9 +95,8 @@ describe('middleware/projection', () => {
   it("doens't executes when no registered events are appended", async done => {
     const eventStore = createEventStore({
       driver: Driver.IN_MEMORY,
-      connectionString: '',
       middleware: [{ action: EventAction.APPENDED, handler: projectionMiddleware() }],
-    }) as InMemoryEventStore;
+    });
 
     await eventStore.install();
     await eventStore.createStream('users');
@@ -131,14 +129,13 @@ describe('middleware/projection', () => {
 
     const eventStore = createEventStore({
       driver: Driver.IN_MEMORY,
-      connectionString: '',
       middleware: [
         {
           action: EventAction.APPENDED,
           handler: projectionMiddleware(projectionComplete),
         },
       ],
-    }) as InMemoryEventStore;
+    });
 
     await eventStore.install();
     await eventStore.createStream('users');

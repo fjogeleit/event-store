@@ -1,8 +1,8 @@
-import { FieldType, IEvent, IEventConstructor, LoadStreamParameter, IMetadataMatcher, MetadataOperator, Options, WriteLockStrategy } from '../types';
+import { FieldType, IEvent, IEventConstructor, LoadStreamParameter, IMetadataMatcher, MetadataOperator, MysqlOptions, WriteLockStrategy } from '../types';
 
 import { Pool } from 'mysql';
 import { BaseEvent } from '../event';
-import { createMysqlPool, DateTime, promisifyQuery } from '../helper';
+import { createMysqlPool, promisifyQuery } from '../helper';
 import { MysqlWriteLockStrategy } from './write-lock-strategy';
 import { PersistenceStrategy } from '../event-store';
 import { StreamAlreadyExists, StreamNotFound } from '../exception';
@@ -25,7 +25,7 @@ export class MysqlPersistenceStrategy implements PersistenceStrategy {
   private readonly eventMap: { [aggregateEvent: string]: IEventConstructor };
   private readonly writeLock: WriteLockStrategy;
 
-  constructor(private readonly options: Options) {
+  constructor(private readonly options: MysqlOptions) {
     this.client = createMysqlPool(options.connection);
     this.writeLock = new MysqlWriteLockStrategy(this.client);
 

@@ -1,14 +1,14 @@
 import { EventStore } from '../event-store';
-import { Options } from '../';
 import { PostgresProjectionManager } from './projection-manager';
 import { PostgresPersistenceStrategy } from './persistence-strategy';
 import { IProjectionManager } from '../projection';
+import { PostgresOptions } from '../types';
 
 export class PostgresEventStore extends EventStore {
   protected readonly _persistenceStrategy;
   protected _projectionManager;
 
-  constructor(protected readonly options: Options) {
+  constructor(protected readonly options: PostgresOptions) {
     super(options);
 
     this._persistenceStrategy = new PostgresPersistenceStrategy(options);

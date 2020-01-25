@@ -2,33 +2,51 @@ import { PostgresEventStore } from './postgres';
 import { InMemoryEventStore } from './in-memory';
 import { MysqlEventStore } from './mysql';
 
-import { Configuration, Driver, IEventStore } from './types';
+import { Driver, IEventStore, MysqlConfiguration, PostgresConfiguration, InMemoryConfiguration } from './types';
 import { Registry } from './registry';
 
 export const EVENT_STREAMS_TABLE = 'event_streams';
 export const PROJECTIONS_TABLE = 'projections';
 
-export const createEventStore = ({ connection, connectionString, aggregates, projections, readModelProjections, middleware, driver }: Configuration): IEventStore => {
-  if (driver === Driver.IN_MEMORY) {
-    return new InMemoryEventStore({
-      connectionString: null,
-      middleware: middleware || [],
-      registry: new Registry(aggregates || [], [], projections || [], readModelProjections || []),
+export function createEventStore(config: MysqlConfiguration): MysqlEventStore;
+export function createEventStore(config: PostgresConfiguration): PostgresEventStore;
+export function createEventStore(config: InMemoryConfiguration): InMemoryEventStore;
+
+export function createEventStore(configuration): IEventStore {
+  if (configuration.driver === Driver.POSTGRES) {
+    return new PostgresEventStore({
+      connectionString: configuration.connectionString,
+      middleware: configuration.middleware || [],
+      registry: new Registry(
+          configuration.aggregates || [],
+          [],
+          configuration.projections || [],
+          configuration.readModelProjections || []
+        ),
     });
   }
 
-  if (driver === Driver.MYSQL) {
+  if (configuration.driver === Driver.MYSQL) {
     return new MysqlEventStore({
-      connection,
-      middleware: middleware || [],
-      registry: new Registry(aggregates || [], [], projections || [], readModelProjections || []),
+      connection: configuration.connection,
+      middleware: configuration.middleware || [],
+      registry: new Registry(
+          configuration.aggregates || [],
+          [],
+          configuration.projections || [],
+          configuration.readModelProjections || []
+        ),
     });
   }
 
-  return new PostgresEventStore({
-    connectionString,
-    middleware: middleware || [],
-    registry: new Registry(aggregates || [], [], projections || [], readModelProjections || []),
+  return new InMemoryEventStore({
+    middleware: configuration.middleware || [],
+    registry: new Registry(
+        configuration.aggregates || [],
+        [],
+        configuration.projections || [],
+        configuration.readModelProjections || []
+      ),
   });
 };
 

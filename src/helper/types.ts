@@ -22,7 +22,7 @@ export interface Client<T> {
   remove(collection: string, identifiers: Identifiers): Promise<void>;
 }
 
-export interface MysqlConfiguration {
+export interface MysqlParameter {
   host: string;
   user: string;
   password: string;

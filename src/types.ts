@@ -7,7 +7,7 @@ import {
   IReadModelProjector,
   IState,
 } from './projection';
-import { IDateTime, MysqlConfiguration } from './helper';
+import { IDateTime, MysqlParameter } from './helper';
 import { IAggregate, IAggregateConstructor, IAggregateRepository } from './aggregate';
 import { Registry } from './registry';
 
@@ -51,13 +51,24 @@ export interface WriteLockStrategy {
 }
 
 export interface Configuration {
-  connectionString: string;
-  connection: MysqlConfiguration;
   projections?: IProjectionConstructor<any>[];
   readModelProjections?: ReadModelProjectionConfiguration[];
   aggregates?: IAggregateConstructor[];
   middleware?: EventMiddleWare[];
-  driver: Driver;
+}
+
+export interface InMemoryConfiguration extends Configuration {
+  driver: Driver.IN_MEMORY;
+}
+
+export interface MysqlConfiguration extends Configuration {
+  connection: MysqlParameter;
+  driver: Driver.MYSQL;
+}
+
+export interface PostgresConfiguration extends Configuration {
+  connectionString: string;
+  driver: Driver.POSTGRES;
 }
 
 export interface ReadModelProjectionConfiguration<R extends IReadModel = IReadModel, T extends IState = IState> {
@@ -65,11 +76,19 @@ export interface ReadModelProjectionConfiguration<R extends IReadModel = IReadMo
   readModel: R;
 }
 
-export interface Options<D extends Driver = Driver.POSTGRES> {
-  connectionString?: string;
-  connection?: MysqlConfiguration;
+export interface Options {
   middleware: EventMiddleWare[];
   registry: Registry;
+}
+
+export interface InMemoryOptions extends Options {}
+
+export interface MysqlOptions extends Options {
+  connection?: MysqlParameter;
+}
+
+export interface PostgresOptions extends Options {
+  connectionString?: string;
 }
 
 export interface EventMetadata {
