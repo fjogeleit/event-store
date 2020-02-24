@@ -1,8 +1,9 @@
 import { IEventStore, IEvent, IMetadataMatcher } from '../types';
 import { IProjectionManager, ProjectionStatus, IProjector, IState, IStream } from '../projection';
-import { EVENT_STREAMS_TABLE, PROJECTIONS_TABLE, promisifyQuery } from '../index';
+import { EVENT_STREAMS_TABLE, PROJECTIONS_TABLE } from '../index';
 import { Pool } from 'mysql';
 import { ProjectorException, ProjectionNotFound } from '../exception';
+import { promisifyQuery } from "../helper/mysql";
 
 const cloneDeep = require('lodash.clonedeep');
 

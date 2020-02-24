@@ -2,7 +2,8 @@ import { EventStore } from '../event-store';
 import { PostgresProjectionManager } from './projection-manager';
 import { PostgresPersistenceStrategy } from './persistence-strategy';
 import { IProjectionManager } from '../projection';
-import { PostgresOptions } from '../types';
+import { PostgresConfiguration, PostgresOptions } from '../types';
+import { Registry } from "../registry";
 
 export class PostgresEventStore extends EventStore {
   protected readonly _persistenceStrategy;
@@ -22,3 +23,16 @@ export class PostgresEventStore extends EventStore {
     return this._projectionManager;
   }
 }
+
+export const createPostgresEventStore = (configuration: PostgresConfiguration) => {
+  return new PostgresEventStore({
+    connectionString: configuration.connectionString,
+    middleware: configuration.middleware || [],
+    registry: new Registry(
+      configuration.aggregates || [],
+      [],
+      configuration.projections || [],
+      configuration.readModelProjections || []
+    ),
+  });
+};

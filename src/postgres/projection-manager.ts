@@ -1,7 +1,7 @@
 import { Pool } from 'pg';
 import { PROJECTIONS_TABLE } from '../index';
 import { PostgresProjector } from './projector';
-import { createPostgresClient } from '../helper';
+import { createPostgresClient } from '../helper/postgres';
 import { PostgresReadModelProjector } from './read-model-projector';
 import { ProjectionNotFound } from '../exception';
 import { IEventStore } from '../types';

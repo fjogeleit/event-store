@@ -1,8 +1,8 @@
 import { AbstractAggregate, IAggregateRepository } from '../aggregate';
 import { BaseEvent } from '../event';
-import { createEventStore } from '../index';
+import { createInMemoryEventStore } from '../in-memory';
 import { InMemoryEventStore } from '../in-memory';
-import { Driver, EventAction } from '../types';
+import { EventAction } from '../types';
 import { Aggregate } from '../decorator';
 import * as uuid from 'uuid/v4';
 import { loggerMiddleware } from './logger-middleware';
@@ -78,8 +78,7 @@ describe('middleware/logger', () => {
   let repository: IAggregateRepository<User> = null;
 
   beforeEach(async done => {
-    eventStore = createEventStore({
-      driver: Driver.IN_MEMORY,
+    eventStore = createInMemoryEventStore({
       middleware: [{ action: EventAction.LOADED, handler: loggerMiddleware(console) }],
     });
 

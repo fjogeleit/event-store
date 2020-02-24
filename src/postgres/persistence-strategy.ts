@@ -12,7 +12,7 @@ import {
 import { Pool, types } from 'pg';
 import * as format from 'pg-format';
 import { BaseEvent } from '../event';
-import { createPostgresClient } from '../helper';
+import { createPostgresClient } from '../helper/postgres';
 import { PostgresWriteLockStrategy } from './write-lock-strategy';
 import { PersistenceStrategy } from '../event-store';
 import { StreamAlreadyExists, StreamNotFound, ConcurrencyException } from '../exception';
@@ -20,7 +20,7 @@ import { EVENT_STREAMS_TABLE, PROJECTIONS_TABLE } from '../index';
 
 const sha1 = require('js-sha1');
 
-export const generateTable = (streamName: string): string => {
+const generateTable = (streamName: string): string => {
   return `_${sha1(streamName)}`;
 };
 

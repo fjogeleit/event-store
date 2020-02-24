@@ -2,7 +2,7 @@ const fastify = require('fastify')()
 const uuid = require('uuid/v4')
 const port = 2000
 
-const { createEventStore } = require('../dist/index')
+const { createMysqlEventStore } = require('../dist/mysql')
 const config = require('../event-store.config')
 
 const User = require('./model/user/user')
@@ -13,7 +13,7 @@ const Comment = require('./model/comment/comment')
 const CommentWasWritten = require('./model/comment/event/comment-was-written')
 
 fastify.register((fastify, opts, next) => {
-  const eventStore = createEventStore(config)
+  const eventStore = createMysqlEventStore(config)
 
   const userRepository = eventStore.createRepository('users', User)
   const commentRepository = eventStore.createRepository('comments', Comment)

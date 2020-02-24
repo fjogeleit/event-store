@@ -1,7 +1,7 @@
 import { AbstractAggregate } from '../aggregate';
 import { BaseEvent } from '../event';
-import { createEventStore } from '../index';
-import { Driver, EventAction, IEventStore } from '../types';
+import { createInMemoryEventStore } from '../in-memory';
+import { EventAction, IEventStore } from '../types';
 import { Aggregate, Projection } from '../decorator';
 import * as uuid from 'uuid/v4';
 import { projectionMiddleware } from './projection-middleware';
@@ -93,8 +93,7 @@ class UserListProjection extends AbstractProjection<{
 
 describe('middleware/projection', () => {
   it("doens't executes when no registered events are appended", async done => {
-    const eventStore = createEventStore({
-      driver: Driver.IN_MEMORY,
+    const eventStore = createInMemoryEventStore({
       middleware: [{ action: EventAction.APPENDED, handler: projectionMiddleware() }],
     });
 
@@ -127,8 +126,7 @@ describe('middleware/projection', () => {
       done();
     };
 
-    const eventStore = createEventStore({
-      driver: Driver.IN_MEMORY,
+    const eventStore = createInMemoryEventStore({
       middleware: [
         {
           action: EventAction.APPENDED,

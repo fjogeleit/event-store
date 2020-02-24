@@ -1,7 +1,7 @@
-import { IEvent, IMetadataMatcher, InMemoryEventStore } from '../';
+import { IEvent, IMetadataMatcher } from '../';
 import { IProjectionManager, IProjector, IState, IStream, ProjectionStatus } from '../projection';
-
 import { ProjectorException, ProjectionNotFound } from '../exception';
+import { InMemoryEventStore } from "./event-store";
 
 const cloneDeep = require('lodash.clonedeep');
 

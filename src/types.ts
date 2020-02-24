@@ -57,18 +57,14 @@ export interface Configuration {
   middleware?: EventMiddleWare[];
 }
 
-export interface InMemoryConfiguration extends Configuration {
-  driver: Driver.IN_MEMORY;
-}
+export interface InMemoryConfiguration extends Configuration {}
 
 export interface MysqlConfiguration extends Configuration {
   connection: MysqlParameter;
-  driver: Driver.MYSQL;
 }
 
 export interface PostgresConfiguration extends Configuration {
   connectionString: string;
-  driver: Driver.POSTGRES;
 }
 
 export interface ReadModelProjectionConfiguration<R extends IReadModel = IReadModel, T extends IState = IState> {

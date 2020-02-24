@@ -1,11 +1,12 @@
 import { Pool } from 'mysql';
 import { PROJECTIONS_TABLE } from '../index';
 import { MysqlProjector } from './projector';
-import { createMysqlPool, promisifyQuery, MysqlParameter } from '../helper';
+import { MysqlParameter } from '../helper';
 import { MysqlReadModelProjector } from './read-model-projector';
 import { ProjectionNotFound } from '../exception';
 import { IEventStore } from '../types';
 import { Query, IProjectionManager, ProjectionStatus, IProjector, IQuery, IState, IReadModel, IReadModelProjector } from '../projection';
+import { createMysqlPool, promisifyQuery } from "../helper/mysql";
 
 export class MysqlProjectionManager implements IProjectionManager {
   private readonly client: Pool;

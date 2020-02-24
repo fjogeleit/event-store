@@ -1,10 +1,9 @@
-import { Driver } from '../types';
-import { createEventStore } from '../index';
+import { createInMemoryEventStore } from '../in-memory';
 import { InMemoryEventStore } from './event-store';
 import * as uuid from 'uuid/v4';
 import { User } from '../../test/model/user';
 import { UserListProjection } from '../../test/projection/UserList';
-import { IAggregateRepository, IProjector } from '../..';
+import { IAggregateRepository, IProjector } from '../index';
 
 describe('inMemory/projector', () => {
   let eventStore: InMemoryEventStore = null;
@@ -12,9 +11,7 @@ describe('inMemory/projector', () => {
   let repository: IAggregateRepository<User> = null;
 
   beforeEach(async next => {
-    eventStore = createEventStore({
-      driver: Driver.IN_MEMORY,
-    }) as InMemoryEventStore;
+    eventStore = createInMemoryEventStore({});
 
     await eventStore.install();
     await eventStore.createStream('users');

@@ -2,7 +2,8 @@ import { EventStore } from '../event-store';
 import { MysqlProjectionManager } from './projection-manager';
 import { MysqlPersistenceStrategy } from './persistence-strategy';
 import { IProjectionManager } from '../projection';
-import { MysqlOptions } from '../types';
+import { MysqlConfiguration, MysqlOptions } from '../types';
+import { Registry } from "../registry";
 
 export class MysqlEventStore extends EventStore {
   protected readonly _persistenceStrategy;
@@ -22,3 +23,16 @@ export class MysqlEventStore extends EventStore {
     return this._projectionManager;
   }
 }
+
+export const createMysqlEventStore = (configuration: MysqlConfiguration) => {
+  return new MysqlEventStore({
+    connection: configuration.connection,
+    middleware: configuration.middleware || [],
+    registry: new Registry(
+      configuration.aggregates || [],
+      [],
+      configuration.projections || [],
+      configuration.readModelProjections || []
+    ),
+  });
+};

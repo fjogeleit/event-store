@@ -38,13 +38,11 @@ For a basic overview you can use the code snippets from this example project bel
 ```
 # main.ts
 
-import { createEventStore } from 'fj-event-store';
+import { createInMemoryEventStore } from 'fj-event-store/postgres';
 
-const eventStore = createEventStore({
+const eventStore = createPostgresEventStore({
   // Postgres ConnectionString  
-  connectionString: 'postgres://user:password@localhost:5432/event-store',
-  // Driver, possible options are "postgres" (default), "mysql" and "in_memory"
-  driver: 'postgres'
+  connectionString: 'postgres://user:password@localhost:5432/event-store'
 });
 
 // Creates the event_streams and projections tables if they not exist
@@ -172,14 +170,11 @@ export class TodoRepository extends AggregateRepository<Todo> {}
 # main.ts
 
 import * as uuid from 'uuid/v4'
-import { createEventStore } from 'fj-event-store';
+import { createInMemoryEventStore } from 'fj-event-store/in-memory';
 import { Todo, TodoRepository } from './todo/model';
 
 (async () => {
-    const eventStore = createEventStore({
-      connectionString: 'postgres://user:password@localhost:5432/event-store',
-      driver: 'postgres'
-    });
+    const eventStore = createInMemoryEventStore();
     
     await eventStore.install();
 
@@ -209,8 +204,7 @@ Using the AbstractProjection class and configure them with the helper Decorator
 ```
 # projection/todo/todo-list.ts
 
-import { AbstractProjection } from 'fj-event-store';
-import { Projection, IProjector } from 'fj-event-store';
+import { AbstractProjection, Projection, IProjector } from 'fj-event-store';
 import { TodoWasAdded } from '../../model/todo/event';
 
 export interface TodoListState {

@@ -1,8 +1,7 @@
 import { UserNameWasUpdated, UserWasRegistered } from '../../test/model/user';
-import { createEventStore } from '../index';
+import { createInMemoryEventStore } from '../in-memory';
 import { AbstractReadModel, AbstractReadModelProjection } from '../projection';
 import { ReadModelProjection } from './read-model-projection';
-import { Driver } from '../types';
 
 class UserTableReadModel extends AbstractReadModel {
   private _readModel: {
@@ -78,9 +77,7 @@ class UserTableProjection extends AbstractReadModelProjection<UserTableReadModel
 
 describe('decorator/projection', () => {
   it('finds decorated projections and add the defined name to the constructor', done => {
-    const eventStore = createEventStore({
-      driver: Driver.IN_MEMORY,
-    });
+    const eventStore = createInMemoryEventStore();
 
     const projector = eventStore.getReadModelProjector<UserTableReadModel, {}>('user_table');
 

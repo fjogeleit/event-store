@@ -1,6 +1,5 @@
 import { Client, Identifiers, Values, MysqlParameter } from './types';
 import { Pool, createPool } from 'mysql';
-import { EVENT_STREAMS_TABLE } from "../index";
 
 let client: Pool = null;
 

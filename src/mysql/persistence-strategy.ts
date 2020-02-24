@@ -2,7 +2,7 @@ import { FieldType, IEvent, IEventConstructor, LoadStreamParameter, IMetadataMat
 
 import { Pool } from 'mysql';
 import { BaseEvent } from '../event';
-import { createMysqlPool, promisifyQuery } from '../helper';
+import { createMysqlPool, promisifyQuery } from '../helper/mysql';
 import { MysqlWriteLockStrategy } from './write-lock-strategy';
 import { PersistenceStrategy } from '../event-store';
 import { StreamAlreadyExists, StreamNotFound } from '../exception';
@@ -10,7 +10,7 @@ import { EVENT_STREAMS_TABLE, PROJECTIONS_TABLE } from '../index';
 
 const sha1 = require('js-sha1');
 
-export const generateTable = (streamName: string): string => {
+const generateTable = (streamName: string): string => {
   return `_${sha1(streamName)}`;
 };
 

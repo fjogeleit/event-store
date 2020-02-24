@@ -1,7 +1,8 @@
 import { EventStore } from '../event-store';
-import { IEvent, Options } from '../';
+import { IEvent, InMemoryConfiguration, Options } from '../';
 import { InMemoryPersistenceStrategy, InMemoryProjectionManager } from './';
 import { IProjectionManager } from '../projection';
+import { Registry } from "../registry";
 
 export class InMemoryEventStore extends EventStore {
   protected readonly _persistenceStrategy;
@@ -25,3 +26,15 @@ export class InMemoryEventStore extends EventStore {
     return this._projectionManager;
   }
 }
+
+export const createInMemoryEventStore = (configuration: InMemoryConfiguration = {}) => {
+  return new InMemoryEventStore({
+    middleware: configuration.middleware || [],
+    registry: new Registry(
+      configuration.aggregates || [],
+      [],
+      configuration.projections || [],
+      configuration.readModelProjections || []
+    ),
+  });
+};

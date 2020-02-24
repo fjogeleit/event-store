@@ -1,5 +1,7 @@
 #! /usr/bin/env node
-const { createEventStore } = require('../dist')
+const { createInMemoryEventStore } = require('../dist/in-memory')
+const { createPostgresEventStore } = require('../dist/postgres')
+const { createMysqlEventStore } = require('../dist/mysql')
 const { green, red } = require('kleur')
 const { Command } = require('commander');
 const util = require('util')
@@ -11,7 +13,17 @@ const getEventStore = () => {
     throw new Error('config file is required')
   }
 
-  const eventStore = createEventStore(require(program.config));
+  const config = require(program.config);
+
+  let eventStore = createInMemoryEventStore(config);
+
+  if (config.driver === 'postgres') {
+    eventStore = createPostgresEventStore(config);
+  }
+
+  if (config.driver === 'mysql') {
+    eventStore = createMysqlEventStore(config);
+  }
 
   return eventStore.install();
 }

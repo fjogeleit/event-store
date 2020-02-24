@@ -1,6 +1,5 @@
-import { Driver, FieldType, IEvent, MetadataOperator } from '../types';
-
-import { createEventStore } from '../index';
+import { FieldType, IEvent, MetadataOperator } from '../types';
+import { createInMemoryEventStore } from '../in-memory';
 import { InMemoryEventStore } from './event-store';
 import * as uuid from 'uuid/v4';
 import { User } from '../../test/model/user';
@@ -10,9 +9,7 @@ describe('inMemory/eventStore', () => {
   let eventStore: InMemoryEventStore = null;
 
   beforeEach(async next => {
-    eventStore = createEventStore({
-      driver: Driver.IN_MEMORY,
-    });
+    eventStore = createInMemoryEventStore({});
 
     await eventStore.install();
 
