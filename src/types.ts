@@ -7,7 +7,7 @@ import {
   IReadModelProjector,
   IState,
 } from './projection';
-import { IDateTime, MysqlParameter } from './helper';
+import { IDateTime } from './helper';
 import { IAggregate, IAggregateConstructor, IAggregateRepository } from './aggregate';
 import { Registry } from './registry';
 
@@ -57,16 +57,6 @@ export interface Configuration {
   middleware?: EventMiddleWare[];
 }
 
-export interface InMemoryConfiguration extends Configuration {}
-
-export interface MysqlConfiguration extends Configuration {
-  connection: MysqlParameter;
-}
-
-export interface PostgresConfiguration extends Configuration {
-  connectionString: string;
-}
-
 export interface ReadModelProjectionConfiguration<R extends IReadModel = IReadModel, T extends IState = IState> {
   projection: IReadModelProjectionConstructor<R, T>;
   readModel: R;
@@ -75,16 +65,6 @@ export interface ReadModelProjectionConfiguration<R extends IReadModel = IReadMo
 export interface Options {
   middleware: EventMiddleWare[];
   registry: Registry;
-}
-
-export interface InMemoryOptions extends Options {}
-
-export interface MysqlOptions extends Options {
-  connection?: MysqlParameter;
-}
-
-export interface PostgresOptions extends Options {
-  connectionString?: string;
 }
 
 export interface EventMetadata {

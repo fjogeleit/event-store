@@ -1,8 +1,8 @@
 import { EventStore } from '../event-store';
+import { PostgresConfiguration, PostgresOptions } from './types';
 import { PostgresProjectionManager } from './projection-manager';
 import { PostgresPersistenceStrategy } from './persistence-strategy';
 import { IProjectionManager } from '../projection';
-import { PostgresConfiguration, PostgresOptions } from '../types';
 import { Registry } from "../registry";
 
 export class PostgresEventStore extends EventStore {

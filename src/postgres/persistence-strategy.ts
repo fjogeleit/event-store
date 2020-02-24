@@ -5,7 +5,6 @@ import {
   LoadStreamParameter,
   IMetadataMatcher,
   MetadataOperator,
-  PostgresOptions,
   WriteLockStrategy
 } from '../types';
 
@@ -17,6 +16,7 @@ import { PostgresWriteLockStrategy } from './write-lock-strategy';
 import { PersistenceStrategy } from '../event-store';
 import { StreamAlreadyExists, StreamNotFound, ConcurrencyException } from '../exception';
 import { EVENT_STREAMS_TABLE, PROJECTIONS_TABLE } from '../index';
+import { PostgresOptions } from "./types";
 
 const sha1 = require('js-sha1');
 

@@ -1,4 +1,4 @@
-import { FieldType, IEvent, IEventConstructor, LoadStreamParameter, IMetadataMatcher, MetadataOperator, MysqlOptions, WriteLockStrategy } from '../types';
+import { FieldType, IEvent, IEventConstructor, LoadStreamParameter, IMetadataMatcher, MetadataOperator, WriteLockStrategy } from '../types';
 
 import { Pool } from 'mysql';
 import { BaseEvent } from '../event';
@@ -7,6 +7,7 @@ import { MysqlWriteLockStrategy } from './write-lock-strategy';
 import { PersistenceStrategy } from '../event-store';
 import { StreamAlreadyExists, StreamNotFound } from '../exception';
 import { EVENT_STREAMS_TABLE, PROJECTIONS_TABLE } from '../index';
+import { MysqlOptions } from "./types";
 
 const sha1 = require('js-sha1');
 

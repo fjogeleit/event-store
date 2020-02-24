@@ -1,4 +1,4 @@
-import { ProjectionStatus, IProjectionManager, IProjector, IQuery, IReadModel, IReadModelProjector, IState } from '../projection/types';
+import { ProjectionStatus, IProjectionManager, IProjector, IQuery, IReadModel, IReadModelProjector, IState } from '../projection';
 
 import { Query } from '../projection';
 import { InMemoryReadModelProjector } from './read-model-projector';

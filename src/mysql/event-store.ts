@@ -2,7 +2,7 @@ import { EventStore } from '../event-store';
 import { MysqlProjectionManager } from './projection-manager';
 import { MysqlPersistenceStrategy } from './persistence-strategy';
 import { IProjectionManager } from '../projection';
-import { MysqlConfiguration, MysqlOptions } from '../types';
+import { MysqlConfiguration, MysqlOptions } from './types';
 import { Registry } from "../registry";
 
 export class MysqlEventStore extends EventStore {

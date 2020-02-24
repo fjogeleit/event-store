@@ -1,6 +1,7 @@
 import { FieldType, IEvent, IEventConstructor, LoadStreamParameter, IMetadataMatcher, MetadataOperator, Options } from '../types';
 
 import { PersistenceStrategy } from '../event-store';
+import { InMemoryOptions } from "./types";
 
 const cloneDeep = require('lodash.clonedeep');
 
@@ -8,7 +9,7 @@ export class InMemoryPersistenceStrategy implements PersistenceStrategy {
   private readonly eventMap: { [aggregateEvent: string]: IEventConstructor };
   private _eventStreams: { [streamName: string]: IEvent<any>[] } = {};
 
-  constructor(private readonly options: Options) {
+  constructor(private readonly options: InMemoryOptions) {
     this.eventMap = this.options.registry.aggregates.reduce((eventMap, aggregate) => {
       const items = aggregate.registeredEvents().reduce<{ [aggregateEvent: string]: IEventConstructor }>((item, event) => {
         item[`${aggregate.name}:${event.name}`] = event;

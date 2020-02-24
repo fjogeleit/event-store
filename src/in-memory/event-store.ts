@@ -1,6 +1,6 @@
 import { EventStore } from '../event-store';
-import { IEvent, InMemoryConfiguration, Options } from '../';
-import { InMemoryPersistenceStrategy, InMemoryProjectionManager } from './';
+import { IEvent, Options } from '../';
+import { InMemoryPersistenceStrategy, InMemoryProjectionManager, InMemoryConfiguration } from './';
 import { IProjectionManager } from '../projection';
 import { Registry } from "../registry";
 
