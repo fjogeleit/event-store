@@ -1,7 +1,5 @@
 #! /usr/bin/env node
 const { createInMemoryEventStore } = require('../dist/in-memory')
-const { createPostgresEventStore } = require('../dist/postgres')
-const { createMysqlEventStore } = require('../dist/mysql')
 const { green, red } = require('kleur')
 const { Command } = require('commander');
 const util = require('util')
@@ -18,10 +16,14 @@ const getEventStore = () => {
   let eventStore = createInMemoryEventStore(config);
 
   if (config.driver === 'postgres') {
+    const { createPostgresEventStore } = require('../dist/postgres')
+
     eventStore = createPostgresEventStore(config);
   }
 
   if (config.driver === 'mysql') {
+    const { createMysqlEventStore } = require('../dist/mysql')
+
     eventStore = createMysqlEventStore(config);
   }
 
