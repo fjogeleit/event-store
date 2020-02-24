@@ -1,4 +1,13 @@
-import { FieldType, IEvent, IEventConstructor, LoadStreamParameter, IMetadataMatcher, MetadataOperator, Options, WriteLockStrategy } from '../types';
+import {
+  FieldType,
+  IEvent,
+  IEventConstructor,
+  LoadStreamParameter,
+  IMetadataMatcher,
+  MetadataOperator,
+  PostgresOptions,
+  WriteLockStrategy
+} from '../types';
 
 import { Pool, types } from 'pg';
 import * as format from 'pg-format';
@@ -34,7 +43,7 @@ export class PostgresPersistenceStrategy implements PersistenceStrategy {
   private readonly eventMap: { [aggregateEvent: string]: IEventConstructor };
   private readonly writeLock: WriteLockStrategy;
 
-  constructor(private readonly options: Options) {
+  constructor(private readonly options: PostgresOptions) {
     this.client = createPostgresClient(options.connectionString);
     this.writeLock = new PostgresWriteLockStrategy(this.client);
 
