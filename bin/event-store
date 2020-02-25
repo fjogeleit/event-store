@@ -1,17 +1,19 @@
 #! /usr/bin/env node
+const { cosmiconfigSync } = require('cosmiconfig');
 const { createInMemoryEventStore } = require('../dist/in-memory')
 const { green, red } = require('kleur')
 const { Command } = require('commander');
 const util = require('util')
 
+const explorer = cosmiconfigSync('event-store');
+const { config, isEmpty } = explorer.search();
+
 const program = new Command();
 
 const getEventStore = () => {
-  if (!program.config) {
-    throw new Error('config file is required')
+  if (isEmpty || !config) {
+    throw new Error('event-store.config.js as configuration source is required')
   }
-
-  const config = require(program.config);
 
   let eventStore = createInMemoryEventStore(config);
 
@@ -34,7 +36,7 @@ program
   .version('0.1.0')
   .usage('--help')
   .description('CLI to manage Event Log streams')
-  .option('-c, --config <path>', 'Path to your event-store.config file', '../../../event-store.config.js')
+  
 
 program
   .command('event-stream:create <streamName>')
@@ -134,7 +136,7 @@ program
   .command('projection:delete <name>')
   .description('Delete a projection')
   .option('-d, --delete-emitted-events', '', false)
-  .action(async (name, { deleteEmittedEvents, deleteReadModel }) => {
+  .action(async (name, { deleteEmittedEvents }) => {
     try {
       const eventStore = await getEventStore();
       let projector = null;

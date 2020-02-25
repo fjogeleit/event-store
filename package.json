@@ -1,6 +1,6 @@
 {
   "name": "fj-event-store",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "A EventStore for NodeJS inspired from the prooph/event-store v7.",
   "author": "Frank Jogeleit <frank.jogeleit@webdev-jogeleit.de>",
   "license": "MIT",
@@ -53,6 +53,7 @@
   },
   "dependencies": {
     "commander": "^3.0.2",
+    "cosmiconfig": "^6.0.0",
     "js-sha1": "^0.6.0",
     "kleur": "^3.0.3",
     "lodash.clonedeep": "^4.5.0",
