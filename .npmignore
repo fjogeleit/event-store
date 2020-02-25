@@ -6,5 +6,9 @@ index.ts
 package-lock.json
 tslint.json
 tsconfig.json
+jest.config.js
 .prettierrc
 event-store.config.js
+.idea
+docker-compose.yml
+.github
