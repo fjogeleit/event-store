@@ -75,10 +75,11 @@ export interface EventMetadata {
 }
 
 export interface IEventConstructor<T = object> {
-  new (_eventName: string, _payload: T, _metadata: EventMetadata, _uuid?: string, microtime?: number): IEvent;
+  new (_eventName: string, _payload: T, _metadata: EventMetadata, _uuid?: string, microtime?: number, no?: number): IEvent;
 }
 
 export interface IEvent<T = object> {
+  no: number;
   uuid: string;
   name: string;
   payload: T;

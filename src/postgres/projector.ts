@@ -300,7 +300,7 @@ export class PostgresProjector<T extends IState = IState> implements IProjector<
 
   private async handleStreamWithSingleHandler(eventStreams: AsyncIterable<IEvent>) {
     for await (const event of eventStreams) {
-      this.streamPositions[event.metadata.stream]++;
+      this.streamPositions[event.metadata.stream] = event.no;
       this.eventCounter++;
 
       this.state = cloneDeep(await this.handler(this.state, event));
@@ -315,7 +315,7 @@ export class PostgresProjector<T extends IState = IState> implements IProjector<
 
   private async handleStreamWithHandlers(eventStreams: AsyncIterable<IEvent>) {
     for await (const event of eventStreams) {
-      this.streamPositions[event.metadata.stream]++;
+      this.streamPositions[event.metadata.stream] = event.no;
       this.eventCounter++;
 
       if (this.handlers[event.name] === undefined) {

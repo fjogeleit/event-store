@@ -34,13 +34,13 @@ export class MysqlIterator {
     }
 
     @bind
-    private convertEvent({ event_id, payload, event_name, metadata, created_at, stream }: any) {
+    private convertEvent({ event_id, payload, event_name, metadata, created_at, stream, no }: any) {
         metadata = JSON.parse(metadata);
         payload = JSON.parse(payload);
 
         const EventConstructor = this.eventMap[`${metadata._aggregate_type}:${event_name}`] || BaseEvent;
 
-        const event = new EventConstructor(event_name, payload, { ...metadata, stream }, event_id, convertDateTime(created_at));
+        const event = new EventConstructor(event_name, payload, { ...metadata, stream }, event_id, convertDateTime(created_at), no);
 
         return this.middleware.reduce<Promise<IEvent>>(async (event, handler) => {
             return handler(await event);

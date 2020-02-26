@@ -268,7 +268,7 @@ export class PostgresPersistenceStrategy implements PersistenceStrategy {
 
     const { where, values } = this.createWhereClause(matcher, paramCounter);
 
-    where.push(`no >= $${paramCounter + values.length + 1}`);
+    where.push(`no > $${paramCounter + values.length + 1}`);
     values.push(fromNumber);
 
     const whereCondition = `WHERE ${where.join(' AND ')}`;

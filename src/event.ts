@@ -10,8 +10,13 @@ export class BaseEvent<T = object> implements IEvent<T> {
     protected readonly _payload: T,
     protected readonly _metadata: EventMetadata,
     protected readonly _uuid: string = uuid(),
-    protected readonly _microtime: number = microtime.now()
+    protected readonly _microtime: number = microtime.now(),
+    protected readonly _no: number = 1
   ) {}
+
+  get no() {
+    return this._no;
+  }
 
   get uuid() {
     return this._uuid;
@@ -52,15 +57,15 @@ export class BaseEvent<T = object> implements IEvent<T> {
   }
 
   public withAggregateType(type: string): IEvent<T> {
-    return new (this.constructor as any)(this._eventName, this._payload, { ...this._metadata, _aggregate_type: type }, this._uuid, this._microtime);
+    return new (this.constructor as any)(this._eventName, this._payload, { ...this._metadata, _aggregate_type: type }, this._uuid, this._microtime, this._no);
   }
 
   public withMetadata(metadata: EventMetadata): IEvent<T> {
-    return new (this.constructor as any)(this._eventName, this._payload, metadata, this._uuid, this._microtime);
+    return new (this.constructor as any)(this._eventName, this._payload, metadata, this._uuid, this._microtime, this._no);
   }
 
   public withAddedMetadata(key: string, value: string): IEvent<T> {
-    return new (this.constructor as any)(this._eventName, this._payload, { ...this._metadata, [key]: value }, this._uuid, this._microtime);
+    return new (this.constructor as any)(this._eventName, this._payload, { ...this._metadata, [key]: value }, this._uuid, this._microtime, this._no);
   }
 
   public static occur(_aggregateId: string, _payload: object, _uuid: string = uuid(), _microtime: number = microtime.now()) {
