@@ -36,9 +36,9 @@ export class PostgresIterator {
 
             if (!events.length) return;
 
-            for (const { event_id, payload, event_name, metadata, created_at } of events) {
+            for (const { event_id, payload, event_name, metadata, created_at, stream } of events) {
                 const EventConstructor = _iterator.eventMap[`${metadata._aggregate_type}:${event_name}`] || BaseEvent;
-                const _event = new EventConstructor(event_name, payload, metadata, event_id, created_at);
+                const _event = new EventConstructor(event_name, payload, { ...metadata, stream }, event_id, created_at);
 
                 yield _iterator.middleware.reduce<Promise<IEvent>>(async (event, handler) => {
                     return handler(await event);
