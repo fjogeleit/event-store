@@ -1,10 +1,10 @@
-import { IReadModel, IReadModelProjectionConstructor } from '../projection';
+import { IReadModel, IReadModelConstructor, IReadModelProjectionConstructor } from '../projection';
 import { READ_MODEL_PROJECTION } from './constants';
 import { Registry } from '../registry';
 
 interface ReadModelConfig {
   name: string;
-  readModel: IReadModel;
+  readModel: IReadModelConstructor<IReadModel>;
 }
 
 export const ReadModelProjection = (config: ReadModelConfig) => (target: IReadModelProjectionConstructor<any, any>) => {

@@ -47,7 +47,7 @@ class UserTableReadModel extends AbstractReadModel {
 
 @ReadModelProjection({
   name: 'user_table',
-  readModel: new UserTableReadModel(),
+  readModel: UserTableReadModel,
 })
 class UserTableProjection extends AbstractReadModelProjection<UserTableReadModel, {}> {
   public project() {

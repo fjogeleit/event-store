@@ -1,5 +1,5 @@
 import { Pool } from 'mysql';
-import { PROJECTIONS_TABLE } from '../index';
+import { IReadModelConstructor, PROJECTIONS_TABLE } from '../index';
 import { MysqlProjector } from './projector';
 import { MysqlParameter } from '../helper';
 import { MysqlReadModelProjector } from './read-model-projector';
@@ -19,8 +19,8 @@ export class MysqlProjectionManager implements IProjectionManager {
     return new MysqlProjector(name, this, this.eventStore, this.client);
   }
 
-  createReadModelProjector<R extends IReadModel, T extends IState = IState>(name: string, readModel: R): IReadModelProjector<R, T> {
-    return new MysqlReadModelProjector<R, T>(name, this, this.eventStore, this.client, readModel);
+  createReadModelProjector<R extends IReadModel, T extends IState = IState>(name: string, ReadModelConstructor: IReadModelConstructor<R>): IReadModelProjector<R, T> {
+    return new MysqlReadModelProjector<R, T>(name, this, this.eventStore, this.client, ReadModelConstructor);
   }
 
   createQuery(): IQuery {

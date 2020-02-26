@@ -1,8 +1,9 @@
-import { IEventStore, IEvent, IMetadataMatcher } from '../';
+import { IEventStore, IEvent, IMetadataMatcher, IReadModelConstructor } from '../';
 import { IProjectionManager, ProjectionStatus, IState, IStream, IReadModel, IReadModelProjector } from '../projection';
 import { Pool } from 'pg';
 import { EVENT_STREAMS_TABLE, PROJECTIONS_TABLE } from '../';
 import { ProjectorException, ProjectionNotFound } from '../exception';
+import { PostgresClient } from "../helper/postgres";
 
 const cloneDeep = require('lodash.clonedeep');
 
@@ -24,6 +25,7 @@ export class PostgresReadModelProjector<R extends IReadModel, T extends IState =
   private lockTimeoutMs: number = 1000;
   private persistBlockSize: number = 1000;
   private updateLockThreshold: number = 0;
+  public readonly readModel: R;
 
   private query: { all: boolean; streams: Array<string> } = {
     all: false,
@@ -35,9 +37,11 @@ export class PostgresReadModelProjector<R extends IReadModel, T extends IState =
     private readonly manager: IProjectionManager,
     private readonly eventStore: IEventStore,
     private readonly client: Pool,
-    public readonly readModel: R,
+    ReadModelConstructor: IReadModelConstructor<R>,
     private status: ProjectionStatus = ProjectionStatus.IDLE
-  ) {}
+  ) {
+    this.readModel = new ReadModelConstructor(new PostgresClient(this.client));
+  }
 
   init(callback: () => T): IReadModelProjector<R, T> {
     if (this.initHandler !== undefined) {

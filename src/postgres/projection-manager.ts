@@ -1,5 +1,5 @@
 import { Pool } from 'pg';
-import { PROJECTIONS_TABLE } from '../index';
+import { IReadModelConstructor, PROJECTIONS_TABLE } from '../index';
 import { PostgresProjector } from './projector';
 import { createPostgresClient } from '../helper/postgres';
 import { PostgresReadModelProjector } from './read-model-projector';
@@ -18,8 +18,8 @@ export class PostgresProjectionManager implements IProjectionManager {
     return new PostgresProjector(name, this, this.eventStore, this.client);
   }
 
-  createReadModelProjector<R extends IReadModel, T extends IState = IState>(name: string, readModel: R): IReadModelProjector<R, T> {
-    return new PostgresReadModelProjector<R, T>(name, this, this.eventStore, this.client, readModel);
+  createReadModelProjector<R extends IReadModel, T extends IState = IState>(name: string, ReadModelConstructor: IReadModelConstructor<R>): IReadModelProjector<R, T> {
+    return new PostgresReadModelProjector<R, T>(name, this, this.eventStore, this.client, ReadModelConstructor);
   }
 
   createQuery(): IQuery {

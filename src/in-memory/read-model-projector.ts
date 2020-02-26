@@ -1,4 +1,4 @@
-import { IEvent, IMetadataMatcher } from '../';
+import { IEvent, IMetadataMatcher, IReadModelConstructor } from '../';
 import { ProjectionStatus, IProjectionManager, IReadModel, IReadModelProjector, IState, IStream } from '../projection';
 
 import { InMemoryEventStore } from './event-store';
@@ -18,6 +18,7 @@ export class InMemoryReadModelProjector<R extends IReadModel, T extends IState =
 
   private streamCreated: boolean = false;
   private isStopped: boolean = false;
+  public readonly readModel: R;
 
   private query: { all: boolean; streams: Array<string> } = {
     all: false,
@@ -35,9 +36,11 @@ export class InMemoryReadModelProjector<R extends IReadModel, T extends IState =
         status: ProjectionStatus;
       };
     },
-    public readonly readModel: R,
+    ReadModelConstructor: IReadModelConstructor<R>,
     private status: ProjectionStatus = ProjectionStatus.IDLE
-  ) {}
+  ) {
+    this.readModel = new ReadModelConstructor(null);
+  }
 
   init(callback: () => T): IReadModelProjector<R, T> {
     if (this.initHandler !== undefined) {

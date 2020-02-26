@@ -1,7 +1,12 @@
 import 'reflect-metadata';
-import { IAggregateConstructor, IAggregateRepositoryConstructor } from './aggregate/types';
-import { AGGREGATE, PROJECTION, READ_MODEL_PROJECTION, REPOSITORY } from './decorator/constants';
-import { IProjectionConstructor, IReadModel, IReadModelProjectionConstructor } from './projection/types';
+import { IAggregateConstructor, IAggregateRepositoryConstructor } from './aggregate';
+import { AGGREGATE, PROJECTION, READ_MODEL_PROJECTION, REPOSITORY } from './decorator';
+import {
+  IProjectionConstructor,
+  IReadModel,
+  IReadModelConstructor,
+  IReadModelProjectionConstructor
+} from './projection';
 
 export class Registry {
   constructor(
@@ -24,7 +29,7 @@ export class Registry {
 
   get readModelProjections(): Array<{
     projection: IReadModelProjectionConstructor<any, any>;
-    readModel: IReadModel;
+    readModel: IReadModelConstructor<any>;
   }> {
     return [...(Reflect.getMetadata(READ_MODEL_PROJECTION, Registry) || []), ...this._readModelProjections];
   }

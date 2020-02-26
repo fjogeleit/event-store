@@ -19,7 +19,7 @@ export interface IStream {
 export interface IProjectionManager {
   createProjector<T>(name: string): IProjector<T>;
 
-  createReadModelProjector<R extends IReadModel, T extends IState = IState>(name: string, readModel: R): IReadModelProjector<R, T>;
+  createReadModelProjector<R extends IReadModel, T extends IState = IState>(name: string, ReadModel: IReadModelConstructor<R>): IReadModelProjector<R, T>;
 
   createQuery(): IQuery;
 
@@ -137,8 +137,12 @@ export interface IProjection<T extends IState> {
   project(): IProjector<T>;
 }
 
+export interface IReadModelConstructor<R extends IReadModel> {
+  new (client: any): R;
+}
+
 export interface IReadModelProjectionConstructor<R extends IReadModel, T extends IState> {
-  new (projectorManager: IProjectionManager, readModel: IReadModel): IReadModelProjection<R, T>;
+  new (projectorManager: IProjectionManager, readModel: IReadModelConstructor<any>): IReadModelProjection<R, T>;
   projectionName: string;
 }
 

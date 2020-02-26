@@ -1,4 +1,13 @@
-import { ProjectionStatus, IProjectionManager, IProjector, IQuery, IReadModel, IReadModelProjector, IState } from '../projection';
+import {
+  ProjectionStatus,
+  IProjectionManager,
+  IProjector,
+  IQuery,
+  IReadModel,
+  IReadModelProjector,
+  IState,
+  IReadModelConstructor
+} from '../projection';
 
 import { Query } from '../projection';
 import { InMemoryReadModelProjector } from './read-model-projector';
@@ -26,14 +35,14 @@ export class InMemoryProjectionManager implements IProjectionManager {
     return new InMemoryProjector(name, this, this.eventStore, this.projections);
   }
 
-  createReadModelProjector<R extends IReadModel, T extends IState = IState>(name: string, readModel: R): IReadModelProjector<R, T> {
+  createReadModelProjector<R extends IReadModel, T extends IState = IState>(name: string, ReadModelConstructor: IReadModelConstructor<R>): IReadModelProjector<R, T> {
     this.projections[name] = {
       state: undefined,
       status: ProjectionStatus.IDLE,
       positions: {},
     };
 
-    return new InMemoryReadModelProjector<R, T>(name, this, this.eventStore, this.projections, readModel);
+    return new InMemoryReadModelProjector<R, T>(name, this, this.eventStore, this.projections, ReadModelConstructor);
   }
 
   createQuery(): IQuery {
