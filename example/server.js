@@ -50,6 +50,45 @@ fastify.register((fastify, opts, next) => {
     }
   })
 
+  fastify.get('/user/generate/:number', async (request, reply) => {
+    for (let i = 0; i <= parseInt(request.params.number); i++) {
+      try {
+        const userId = uuid();
+
+        const user = User.register(userId, `User ${i}`, 'password')
+
+        await userRepository.save(user);
+      } catch (e) {
+        reply.type('application/json').code(500)
+
+        return { content: e.toString() }
+      }
+    }
+
+    reply.type('application/json').code(200)
+    return { content: 'success' }
+  })
+
+  fastify.get('/users/stream', async (request, reply) => {
+    try {
+      const events = await eventStore.load('users')
+
+      reply.type('application/json').code(200)
+
+      const result = [];
+
+      for (const user of events) {
+        result.push(user.username);
+      }
+
+      return { length: result.length, result };
+    } catch (e) {
+      reply.type('application/json').code(500)
+
+      return { content: e.toString(), stack: e.stack }
+    }
+  })
+
   fastify.get('/user/:id', async (request, reply) => {
     try {
       const user = await userRepository.get(request.params.id)

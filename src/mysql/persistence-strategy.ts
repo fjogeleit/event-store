@@ -1,24 +1,26 @@
-import { FieldType, IEvent, IEventConstructor, LoadStreamParameter, IMetadataMatcher, MetadataOperator, WriteLockStrategy } from '../types';
+import {
+  FieldType,
+  IEvent,
+  IEventConstructor,
+  LoadStreamParameter,
+  IMetadataMatcher,
+  MetadataOperator,
+  WriteLockStrategy
+} from '../types';
 
 import { Pool } from 'mysql';
-import { BaseEvent } from '../event';
 import { createMysqlPool, promisifyQuery } from '../helper/mysql';
 import { MysqlWriteLockStrategy } from './write-lock-strategy';
 import { PersistenceStrategy } from '../event-store';
 import { StreamAlreadyExists, StreamNotFound } from '../exception';
 import { EVENT_STREAMS_TABLE, PROJECTIONS_TABLE } from '../index';
 import { MysqlOptions } from "./types";
+import { MysqlIterator } from "./iterator";
 
 const sha1 = require('js-sha1');
 
 const generateTable = (streamName: string): string => {
   return `_${sha1(streamName)}`;
-};
-
-const convertDateTime = (dateTimeString: string): number => {
-  const date = new Date(dateTimeString);
-  const offset = date.getTimezoneOffset() * -1 * 60 * 1000;
-  return (date.getTime() + offset) * 1000 + parseInt(dateTimeString.substring(dateTimeString.length - 3));
 };
 
 export class MysqlPersistenceStrategy implements PersistenceStrategy {
@@ -251,12 +253,12 @@ export class MysqlPersistenceStrategy implements PersistenceStrategy {
     }
   }
 
-  public async load(streamName: string, fromNumber: number, count?: number, matcher?: IMetadataMatcher) {
+  public async load(streamName: string, fromNumber: number, count?: number, matcher?: IMetadataMatcher): Promise<AsyncIterable<IEvent>> {
     const { query, values } = await this.createQuery(streamName, fromNumber, matcher);
 
-    const rows = await promisifyQuery<Array<any>>(this.client, query, values);
+    const iterator = new MysqlIterator(this.client, { query, values }, this.eventMap);
 
-    return rows.map<IEvent>(this.convertEvent);
+    return iterator.iterator;
   }
 
   public async mergeAndLoad(streams: Array<LoadStreamParameter>) {
@@ -276,21 +278,12 @@ export class MysqlPersistenceStrategy implements PersistenceStrategy {
       query = queries.map(query => `(${query})`).join(' UNION ALL ') + ' ORDER BY created_at ASC';
     }
 
-    const params = parameters.reduce<Array<any>>((params, values) => [...params, ...values], []);
+    const values = parameters.reduce<Array<any>>((params, values) => [...params, ...values], []);
 
-    const rows = await promisifyQuery<Array<any>>(this.client, query, params);
+    const iterator = new MysqlIterator(this.client, { query, values }, this.eventMap);
 
-    return rows.map<IEvent>(this.convertEvent);
+    return iterator.iterator;
   }
-
-  private convertEvent = ({ event_id, payload, event_name, metadata, created_at, stream }: any) => {
-    metadata = JSON.parse(metadata);
-    payload = JSON.parse(payload);
-
-    const EventConstructor = this.eventMap[`${metadata._aggregate_type}:${event_name}`] || BaseEvent;
-
-    return new EventConstructor(event_name, payload, { ...metadata, stream }, event_id, convertDateTime(created_at));
-  };
 
   private async createQuery(streamName: string, fromNumber: number, matcher?: IMetadataMatcher) {
     const result = await this.hasStream(streamName);

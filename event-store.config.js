@@ -13,7 +13,7 @@ const connection = createPool({
 });
 
 module.exports = {
-  driver: 'mysql',
+  driver: 'postgres',
   connectionString: 'postgres://user:password@localhost/event-store',
   connection: {
     user: 'user',

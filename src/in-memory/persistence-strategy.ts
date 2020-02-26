@@ -1,7 +1,15 @@
-import { FieldType, IEvent, IEventConstructor, LoadStreamParameter, IMetadataMatcher, MetadataOperator, Options } from '../types';
+import {
+  FieldType,
+  IEvent,
+  IEventConstructor,
+  LoadStreamParameter,
+  IMetadataMatcher,
+  MetadataOperator
+} from '../types';
 
 import { PersistenceStrategy } from '../event-store';
 import { InMemoryOptions } from "./types";
+import { InMemoryIterator } from "./iterator";
 
 const cloneDeep = require('lodash.clonedeep');
 
@@ -57,13 +65,15 @@ export class InMemoryPersistenceStrategy implements PersistenceStrategy {
     );
   }
 
-  public async load(streamName: string, fromNumber: number, count?: number, matcher?: IMetadataMatcher) {
+  public async load(streamName: string, fromNumber: number, count?: number, matcher?: IMetadataMatcher): Promise<AsyncIterable<IEvent>> {
     const rows = this.filter(this._eventStreams[streamName].slice(fromNumber - 1, count), matcher);
 
-    return cloneDeep(rows);
+    const iterator = new InMemoryIterator(cloneDeep(rows));
+
+    return iterator.iterator;
   }
 
-  public async mergeAndLoad(streams: Array<LoadStreamParameter>) {
+  public async mergeAndLoad(streams: Array<LoadStreamParameter>): Promise<AsyncIterable<IEvent>> {
     let events: IEvent<any>[] = [];
 
     for (const { streamName, fromNumber = 1, matcher } of streams) {
@@ -74,7 +84,9 @@ export class InMemoryPersistenceStrategy implements PersistenceStrategy {
       return a.createdAt.microtime - b.createdAt.microtime;
     });
 
-    return cloneDeep(rows);
+    const iterator = new InMemoryIterator(cloneDeep(rows));
+
+    return iterator.iterator;
   }
 
   private match(value: any, expected: any, operation: MetadataOperator): boolean {

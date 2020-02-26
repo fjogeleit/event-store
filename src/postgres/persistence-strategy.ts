@@ -10,13 +10,13 @@ import {
 
 import { Pool, types } from 'pg';
 import * as format from 'pg-format';
-import { BaseEvent } from '../event';
 import { createPostgresClient } from '../helper/postgres';
 import { PostgresWriteLockStrategy } from './write-lock-strategy';
 import { PersistenceStrategy } from '../event-store';
 import { StreamAlreadyExists, StreamNotFound, ConcurrencyException } from '../exception';
 import { EVENT_STREAMS_TABLE, PROJECTIONS_TABLE } from '../index';
 import { PostgresOptions } from "./types";
+import { PostgresIterator } from "./iterator";
 
 const sha1 = require('js-sha1');
 
@@ -210,24 +210,21 @@ export class PostgresPersistenceStrategy implements PersistenceStrategy {
     }
   }
 
-  public async load(streamName: string, fromNumber: number, count?: number, matcher?: IMetadataMatcher) {
+  public async load(streamName: string, fromNumber: number, count?: number, matcher?: IMetadataMatcher): Promise<AsyncIterable<IEvent>> {
     const { query, values } = await this.createQuery(streamName, fromNumber, matcher);
-
-    const { rows } = await this.client.query({
+    const queryConfig = {
       text: query,
       values,
       // @ts-ignore
       types: { getTypeParser },
-    });
+    };
 
-    return rows.map<IEvent>(({ event_id, payload, event_name, metadata, created_at }) => {
-      const EventConstructor = this.eventMap[`${metadata._aggregate_type}:${event_name}`] || BaseEvent;
+    const iterator = new PostgresIterator(this.client, queryConfig, this.eventMap);
 
-      return new EventConstructor(event_name, payload, metadata, event_id, created_at);
-    });
+    return iterator.iterator;
   }
 
-  public async mergeAndLoad(streams: Array<LoadStreamParameter>) {
+  public async mergeAndLoad(streams: Array<LoadStreamParameter>): Promise<AsyncIterable<IEvent>> {
     let paramCounter = 0;
     let queries = [];
     let parameters = [];
@@ -248,19 +245,16 @@ export class PostgresPersistenceStrategy implements PersistenceStrategy {
     }
 
     const params = parameters.reduce<Array<any>>((params, values) => [...params, ...values], []);
-
-    const { rows } = await this.client.query({
+    const queryConfig = {
       text: query,
       values: params,
       // @ts-ignore
       types: { getTypeParser },
-    });
+    };
 
-    return rows.map<IEvent>(({ event_id, payload, event_name, metadata, created_at, stream }: any) => {
-      const EventConstructor = this.eventMap[`${metadata._aggregate_type}:${event_name}`] || BaseEvent;
+    const iterator = new PostgresIterator(this.client, queryConfig, this.eventMap);
 
-      return new EventConstructor(event_name, payload, { ...metadata, stream }, event_id, created_at);
-    });
+    return iterator.iterator;
   }
 
   private async createQuery(streamName: string, fromNumber: number, matcher?: IMetadataMatcher, paramCounter = 0) {

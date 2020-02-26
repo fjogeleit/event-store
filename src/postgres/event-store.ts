@@ -6,8 +6,8 @@ import { IProjectionManager } from '../projection';
 import { Registry } from "../registry";
 
 export class PostgresEventStore extends EventStore {
-  protected readonly _persistenceStrategy;
-  protected _projectionManager;
+  protected readonly _persistenceStrategy: PostgresPersistenceStrategy;
+  protected _projectionManager: IProjectionManager;
 
   constructor(protected readonly options: PostgresOptions) {
     super(options);
