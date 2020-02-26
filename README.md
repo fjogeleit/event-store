@@ -38,7 +38,7 @@ For a basic overview you can use the code snippets from this example project bel
 ```
 # main.ts
 
-import { createInMemoryEventStore } from 'fj-event-store/postgres';
+import { createPostgresEventStore } from 'fj-event-store/postgres';
 
 const eventStore = createPostgresEventStore({
   // Postgres ConnectionString  
@@ -251,11 +251,10 @@ The CLI `event-store` supports the usage of EventStore with different helper com
 ```
 Usage: event-store [command] --help
 
-CLI to manage EventStore streams
+CLI to manage EventStore streams, requires a event-store.config.js config file.
 
 Options:
   -V, --version                       output the version number
-  -c, --config <path>                 Path to your event-store.config file (default: ProjectRoot: event-store.config.js)
   -h, --help                          output usage information
 
 Commands:
