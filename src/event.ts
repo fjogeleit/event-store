@@ -68,6 +68,10 @@ export class BaseEvent<T = object> implements IEvent<T> {
     return new (this.constructor as any)(this._eventName, this._payload, { ...this._metadata, [key]: value }, this._uuid, this._microtime, this._no);
   }
 
+  public withNo(no: number): IEvent<T> {
+    return new (this.constructor as any)(this._eventName, this._payload, this._metadata, this._uuid, this._microtime, no);
+  }
+
   public static occur(_aggregateId: string, _payload: object, _uuid: string = uuid(), _microtime: number = microtime.now()) {
     return new (this as any)(
       this.name,

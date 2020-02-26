@@ -89,6 +89,7 @@ export interface IEvent<T = object> {
   withVersion(version: number): IEvent<T>;
   withAggregateType(type: string): IEvent<T>;
   withMetadata(metadata: EventMetadata): IEvent<T>;
+  withNo(no: number): IEvent<T>;
 }
 
 export enum EventAction {

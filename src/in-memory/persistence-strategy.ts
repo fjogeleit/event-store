@@ -60,9 +60,15 @@ export class InMemoryPersistenceStrategy implements PersistenceStrategy {
   public async dropSchema(streamName: string) {}
 
   public async appendTo<T = object>(streamName: string, events: IEvent<T>[]) {
-    this._eventStreams[streamName] = [...this._eventStreams[streamName], ...events].sort(
+    events = events.sort(
       (a, b) => a.metadata._aggregate_version - b.metadata._aggregate_version
     );
+
+    let no = this._eventStreams[streamName].length + 1;
+
+    for (const event of events) {
+      this._eventStreams[streamName].push(event.withNo(no));
+    }
   }
 
   public async load(streamName: string, fromNumber: number, count?: number, matcher?: IMetadataMatcher, middleware: WrappedMiddleware[] = []): Promise<AsyncIterable<IEvent>> {
