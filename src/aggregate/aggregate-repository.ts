@@ -49,15 +49,20 @@ export class AggregateRepository<T extends IAggregate> implements IAggregateRepo
     };
 
     const events = await this.eventStore.load(this.streamName, 1, matcher);
+    const history = [];
+
+    for await (const event of events) {
+      history.push(event);
+    }
 
     let aggregate: T = new this.aggregate();
 
-    if (events.length === 0) {
+    if (history.length === 0) {
       throw AggregateNotFound.withName(aggregate.constructor.name);
     }
 
     aggregate.fromHistory(
-      events.map<IEvent>(event => {
+      history.map<IEvent>(event => {
         const EventConstructor = this.eventMap[event.name] || BaseEvent;
 
         return new EventConstructor(event.name, event.payload, event.metadata, event.uuid, event.createdAt.microtime);

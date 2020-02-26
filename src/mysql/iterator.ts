@@ -3,6 +3,7 @@ import bind from 'bind-decorator';
 import { IEvent, IEventConstructor } from '../types';
 import { BaseEvent } from "../event";
 import { promisifyQuery } from "../helper/mysql";
+import { WrappedMiddleware } from "../event-store";
 
 const convertDateTime = (dateTimeString: string): number => {
     const date = new Date(dateTimeString);
@@ -18,7 +19,8 @@ export class MysqlIterator {
     constructor(
         private client: Pool,
         private params: { query: string; values: any[] },
-        private readonly eventMap: { [aggregateEvent: string]: IEventConstructor }) {}
+        private readonly eventMap: { [aggregateEvent: string]: IEventConstructor },
+        private readonly middleware: WrappedMiddleware[] = []) {}
 
     @bind
     private async fetchEvents() {
@@ -38,7 +40,11 @@ export class MysqlIterator {
 
         const EventConstructor = this.eventMap[`${metadata._aggregate_type}:${event_name}`] || BaseEvent;
 
-        return new EventConstructor(event_name, payload, { ...metadata, stream }, event_id, convertDateTime(created_at));
+        const event = new EventConstructor(event_name, payload, { ...metadata, stream }, event_id, convertDateTime(created_at));
+
+        return this.middleware.reduce<Promise<IEvent>>(async (event, handler) => {
+            return handler(await event);
+        }, Promise.resolve(event))
     };
 
     get iterator(): AsyncIterable<IEvent> {

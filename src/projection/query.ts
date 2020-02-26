@@ -151,8 +151,8 @@ export class Query<T extends IState> implements IQuery {
     }
   }
 
-  private async handleStreamWithSingleHandler(eventStreams: IEvent[]) {
-    for (const event of eventStreams) {
+  private async handleStreamWithSingleHandler(eventStreams: AsyncIterable<IEvent>) {
+    for await (const event of eventStreams) {
       this.streamPositions[event.metadata.stream]++;
       this.state = cloneDeep(await this.handler(this.state, event));
 
@@ -162,8 +162,8 @@ export class Query<T extends IState> implements IQuery {
     }
   }
 
-  private async handleStreamWithHandlers(eventStreams: IEvent[]) {
-    for (const event of eventStreams) {
+  private async handleStreamWithHandlers(eventStreams: AsyncIterable<IEvent>) {
+    for await (const event of eventStreams) {
       this.streamPositions[event.metadata.stream]++;
 
       if (this.handlers[event.name] === undefined) {

@@ -314,8 +314,8 @@ export class MysqlReadModelProjector<R extends IReadModel, T extends IState = IS
     return Object.keys(this.handlers).includes(event);
   }
 
-  private async handleStreamWithSingleHandler(eventStreams: IEvent[]) {
-    for (const event of eventStreams) {
+  private async handleStreamWithSingleHandler(eventStreams: AsyncIterable<IEvent>) {
+    for await (const event of eventStreams) {
       this.streamPositions[event.metadata.stream]++;
       this.eventCounter++;
 
@@ -329,8 +329,8 @@ export class MysqlReadModelProjector<R extends IReadModel, T extends IState = IS
     }
   }
 
-  private async handleStreamWithHandlers(eventStreams: IEvent[]) {
-    for (const event of eventStreams) {
+  private async handleStreamWithHandlers(eventStreams: AsyncIterable<IEvent>) {
+    for await (const event of eventStreams) {
       this.streamPositions[event.metadata.stream]++;
       this.eventCounter++;
 

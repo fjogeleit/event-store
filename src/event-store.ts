@@ -20,6 +20,8 @@ interface MiddlewareCollection {
   [EventAction.LOADED]: EventCallback[];
 }
 
+export type WrappedMiddleware = (event: IEvent) => Promise<IEvent> | IEvent;
+
 export interface PersistenceStrategy {
   createEventStreamsTable(): Promise<void>;
   createProjectionsTable(): Promise<void>;
@@ -29,8 +31,8 @@ export interface PersistenceStrategy {
   createSchema(streamName: string): Promise<void>;
   dropSchema(streamName: string): Promise<void>;
   appendTo<T = object>(streamName: string, events: IEvent<T>[]): Promise<void>;
-  load(streamName: string, fromNumber: number, count?: number, matcher?: IMetadataMatcher):Promise<AsyncIterable<IEvent>>;
-  mergeAndLoad(streams: Array<LoadStreamParameter>): Promise<AsyncIterable<IEvent>>;
+  load(streamName: string, fromNumber: number, count?: number, matcher?: IMetadataMatcher, middleware?: WrappedMiddleware[]):Promise<AsyncIterable<IEvent>>;
+  mergeAndLoad(streams: Array<LoadStreamParameter>, middleware?: WrappedMiddleware[]): Promise<AsyncIterable<IEvent>>;
   hasStream(streamName: string): Promise<boolean>;
   deleteStream(streamName: string): Promise<void>;
 }
@@ -143,36 +145,18 @@ export abstract class EventStore implements IEventStore {
     }
   }
 
-  public async load(streamName: string, fromNumber: number = 1, metadataMatcher?: IMetadataMatcher): Promise<IEvent[]> {
-    const events = await this._persistenceStrategy.load(streamName, fromNumber, undefined, metadataMatcher);
+  public async load(streamName: string, fromNumber: number = 1, metadataMatcher?: IMetadataMatcher): Promise<AsyncIterable<IEvent>> {
+    const middlewareWrapper = (handler: EventCallback, action: EventAction) => (event: IEvent) => handler(event, action, this);
+    const middleware = this.middleware[EventAction.LOADED].map((handler) => middlewareWrapper(handler, EventAction.LOADED));
 
-    const result = [];
-
-    for await (const event of events) {
-      const _event = this.middleware[EventAction.LOADED].reduce<Promise<IEvent>>(async (event, handler) => {
-        return handler(await event, EventAction.LOADED, this);
-      }, Promise.resolve(event));
-
-      result.push(await _event);
-    }
-
-    return result;
+    return this._persistenceStrategy.load(streamName, fromNumber, undefined, metadataMatcher, middleware);
   }
 
-  public async mergeAndLoad(...streams: LoadStreamParameter[]) {
-    const events = await this._persistenceStrategy.mergeAndLoad(streams);
+  public async mergeAndLoad(...streams: LoadStreamParameter[]): Promise<AsyncIterable<IEvent>> {
+    const middlewareWrapper = (handler: EventCallback, action: EventAction) => (event: IEvent) => handler(event, action, this);
+    const middleware = this.middleware[EventAction.LOADED].map((handler) => middlewareWrapper(handler, EventAction.LOADED));
 
-    const result = [];
-
-    for await (const event of events) {
-      const _event = this.middleware[EventAction.LOADED].reduce<Promise<IEvent>>(async (event, handler) => {
-         return handler(await event, EventAction.LOADED, this);
-       }, Promise.resolve(event));
-
-      result.push(await _event);
-    }
-
-    return result;
+    return await this._persistenceStrategy.mergeAndLoad(streams, middleware);
   }
 
   public hasStream(streamName: string): Promise<boolean> {

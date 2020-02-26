@@ -29,8 +29,8 @@ export interface IEventStore {
   registeredProjections: string[];
 
   install(): Promise<IEventStore>;
-  load(streamName: string, fromNumber: number, metadataMatcher?: IMetadataMatcher): Promise<IEvent[]>;
-  mergeAndLoad(...streams: Array<LoadStreamParameter>): Promise<IEvent[]>;
+  load(streamName: string, fromNumber: number, metadataMatcher?: IMetadataMatcher): Promise<AsyncIterable<IEvent>>;
+  mergeAndLoad(...streams: Array<LoadStreamParameter>): Promise<AsyncIterable<IEvent>>;
   appendTo(streamName: string, events: IEvent[]): Promise<void>;
   createStream(streamName: string): Promise<void>;
   hasStream(streamName: string): Promise<boolean>;

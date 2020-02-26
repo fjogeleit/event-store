@@ -1,7 +1,9 @@
 import { IEvent } from '../types';
+import { WrappedMiddleware } from "../event-store";
 
 export class InMemoryIterator {
-    constructor(private events: IEvent[]) {}
+    constructor(private events: IEvent[],
+                private readonly middleware: WrappedMiddleware[] = []) {}
 
     get iterator(): AsyncIterable<IEvent> {
         const _iterator = this;
@@ -9,7 +11,9 @@ export class InMemoryIterator {
         return {
             [Symbol.asyncIterator]: async function* () {
                 for (const event of _iterator.events) {
-                    yield event;
+                    yield _iterator.middleware.reduce<Promise<IEvent>>(async (event, handler) => {
+                        return handler(await event);
+                    }, Promise.resolve(event));
                 }
             }
         }

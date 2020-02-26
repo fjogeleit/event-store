@@ -11,7 +11,7 @@ import {
 import { Pool } from 'mysql';
 import { createMysqlPool, promisifyQuery } from '../helper/mysql';
 import { MysqlWriteLockStrategy } from './write-lock-strategy';
-import { PersistenceStrategy } from '../event-store';
+import { PersistenceStrategy, WrappedMiddleware } from '../event-store';
 import { StreamAlreadyExists, StreamNotFound } from '../exception';
 import { EVENT_STREAMS_TABLE, PROJECTIONS_TABLE } from '../index';
 import { MysqlOptions } from "./types";
@@ -253,15 +253,15 @@ export class MysqlPersistenceStrategy implements PersistenceStrategy {
     }
   }
 
-  public async load(streamName: string, fromNumber: number, count?: number, matcher?: IMetadataMatcher): Promise<AsyncIterable<IEvent>> {
+  public async load(streamName: string, fromNumber: number, count?: number, matcher?: IMetadataMatcher, middleware: WrappedMiddleware[] = []): Promise<AsyncIterable<IEvent>> {
     const { query, values } = await this.createQuery(streamName, fromNumber, matcher);
 
-    const iterator = new MysqlIterator(this.client, { query, values }, this.eventMap);
+    const iterator = new MysqlIterator(this.client, { query, values }, this.eventMap, middleware);
 
     return iterator.iterator;
   }
 
-  public async mergeAndLoad(streams: Array<LoadStreamParameter>) {
+  public async mergeAndLoad(streams: Array<LoadStreamParameter>, middleware: WrappedMiddleware[] = []) {
     let queries = [];
     let parameters = [];
 

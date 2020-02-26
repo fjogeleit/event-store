@@ -77,7 +77,7 @@ fastify.register((fastify, opts, next) => {
 
       const result = [];
 
-      for (const user of events) {
+      for await (const user of events) {
         result.push(user.username);
       }
 

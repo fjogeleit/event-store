@@ -2,6 +2,7 @@ import { Pool } from 'pg';
 import bind from 'bind-decorator';
 import { IEvent, IEventConstructor } from '../types';
 import { BaseEvent } from "../event";
+import { WrappedMiddleware } from "../event-store";
 
 export class PostgresIterator {
     private limit = 1000;
@@ -11,7 +12,8 @@ export class PostgresIterator {
     constructor(
         private client: Pool,
         private params: { text: string; values: any[], types: any },
-        private readonly eventMap: { [aggregateEvent: string]: IEventConstructor }) {}
+        private readonly eventMap: { [aggregateEvent: string]: IEventConstructor },
+        private readonly middleware: WrappedMiddleware[] = []) {}
 
     @bind
     private async fetchEvents() {
@@ -36,8 +38,11 @@ export class PostgresIterator {
 
             for (const { event_id, payload, event_name, metadata, created_at } of events) {
                 const EventConstructor = _iterator.eventMap[`${metadata._aggregate_type}:${event_name}`] || BaseEvent;
+                const _event = new EventConstructor(event_name, payload, metadata, event_id, created_at);
 
-                yield new EventConstructor(event_name, payload, metadata, event_id, created_at);
+                yield _iterator.middleware.reduce<Promise<IEvent>>(async (event, handler) => {
+                    return handler(await event);
+                }, Promise.resolve(_event));
             }
 
             yield* generatorWrapper();

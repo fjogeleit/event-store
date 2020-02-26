@@ -5,6 +5,16 @@ import * as uuid from 'uuid/v4';
 import { User } from '../../test/model/user';
 import { Comment } from '../../test/model/comment';
 
+const iterableToArray = async (iterator: AsyncIterable<any>): Promise<any[]> => {
+  const array = [];
+
+  for await (const item of iterator) {
+    array.push(item);
+  }
+
+  return array;
+};
+
 describe('inMemory/eventStore', () => {
   let eventStore: InMemoryEventStore = null;
 
@@ -78,7 +88,7 @@ describe('inMemory/eventStore', () => {
 
     const loaded = await eventStore.load('users');
 
-    expect(loaded).toEqual(events);
+    expect(await iterableToArray(loaded)).toEqual(events);
 
     done();
   });
@@ -91,9 +101,11 @@ describe('inMemory/eventStore', () => {
     await eventStore.createStream('users');
     await eventStore.appendTo('users', [registered, nameChanged]);
 
-    const [loadedNameChangeEvent] = await eventStore.load('users', 2);
+    const events = await eventStore.load('users', 2);
 
-    expect(loadedNameChangeEvent).toEqual(nameChanged);
+    for await (const loadedNameChangeEvent of events) {
+      expect(loadedNameChangeEvent).toEqual(nameChanged);
+    }
 
     done();
   });
@@ -108,7 +120,7 @@ describe('inMemory/eventStore', () => {
     await eventStore.createStream('users');
     await eventStore.appendTo('users', events);
 
-    const [ChangedToTommy, ChangedToHarald, ...rest] = await eventStore.load('users', 1, {
+    const storeEvents = await eventStore.load('users', 1, {
       data: [
         {
           fieldType: FieldType.MESSAGE_PROPERTY,
@@ -118,6 +130,10 @@ describe('inMemory/eventStore', () => {
         },
       ],
     });
+
+    const history = await iterableToArray(storeEvents);
+
+    const [ChangedToTommy, ChangedToHarald, ...rest] = history;
 
     expect(rest.length).toEqual(0);
     expect(ChangedToTommy.name).toEqual('UserNameWasUpdated');
@@ -143,10 +159,14 @@ describe('inMemory/eventStore', () => {
     await eventStore.createStream('comments');
     await eventStore.appendTo('comments', commentEvents);
 
-    const [UserRegistered, NameChangedToTommy, CommentWasWritten, NameChangedToHarald] = await eventStore.mergeAndLoad(
+    const storeEvents = await eventStore.mergeAndLoad(
       { streamName: 'users' },
       { streamName: 'comments' }
     );
+
+    const history = await iterableToArray(storeEvents);
+
+    const [UserRegistered, NameChangedToTommy, CommentWasWritten, NameChangedToHarald] = history;
 
     expect(UserRegistered.constructor.name).toEqual('UserWasRegistered');
     expect((NameChangedToTommy as IEvent<{ username: string }>).payload.username).toEqual('Tommy');

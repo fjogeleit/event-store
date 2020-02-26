@@ -1,4 +1,4 @@
-# Event-Store v0.2
+# Event-Store v0.3
 
 FJ-EventStore is an EventStore heavily inspired by the prooph/event-store v7.0.
 

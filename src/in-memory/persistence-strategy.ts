@@ -7,7 +7,7 @@ import {
   MetadataOperator
 } from '../types';
 
-import { PersistenceStrategy } from '../event-store';
+import { PersistenceStrategy, WrappedMiddleware } from '../event-store';
 import { InMemoryOptions } from "./types";
 import { InMemoryIterator } from "./iterator";
 
@@ -65,15 +65,15 @@ export class InMemoryPersistenceStrategy implements PersistenceStrategy {
     );
   }
 
-  public async load(streamName: string, fromNumber: number, count?: number, matcher?: IMetadataMatcher): Promise<AsyncIterable<IEvent>> {
+  public async load(streamName: string, fromNumber: number, count?: number, matcher?: IMetadataMatcher, middleware: WrappedMiddleware[] = []): Promise<AsyncIterable<IEvent>> {
     const rows = this.filter(this._eventStreams[streamName].slice(fromNumber - 1, count), matcher);
 
-    const iterator = new InMemoryIterator(cloneDeep(rows));
+    const iterator = new InMemoryIterator(cloneDeep(rows), middleware);
 
     return iterator.iterator;
   }
 
-  public async mergeAndLoad(streams: Array<LoadStreamParameter>): Promise<AsyncIterable<IEvent>> {
+  public async mergeAndLoad(streams: Array<LoadStreamParameter>, middleware: WrappedMiddleware[] = []): Promise<AsyncIterable<IEvent>> {
     let events: IEvent<any>[] = [];
 
     for (const { streamName, fromNumber = 1, matcher } of streams) {
@@ -84,7 +84,7 @@ export class InMemoryPersistenceStrategy implements PersistenceStrategy {
       return a.createdAt.microtime - b.createdAt.microtime;
     });
 
-    const iterator = new InMemoryIterator(cloneDeep(rows));
+    const iterator = new InMemoryIterator(cloneDeep(rows), middleware);
 
     return iterator.iterator;
   }
