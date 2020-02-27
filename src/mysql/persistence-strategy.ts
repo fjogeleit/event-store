@@ -184,7 +184,7 @@ export class MysqlPersistenceStrategy implements PersistenceStrategy {
     await this.client.query(`DROP TABLE IF EXISTS ${tableName};`);
   }
 
-  public async appendTo<T = object>(streamName: string, events: IEvent<T>[]) {
+  public async appendTo<T extends object = object>(streamName: string, events: IEvent<T>[]) {
     const tableName = generateTable(streamName);
 
     const data = events.map(event => ({

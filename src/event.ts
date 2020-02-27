@@ -4,7 +4,7 @@ import * as uuid from 'uuid/v4';
 
 const microtime = require('microtime');
 
-export class BaseEvent<T = object> implements IEvent<T> {
+export class BaseEvent<T extends object = object> implements IEvent<T> {
   public constructor(
     protected _eventName: string,
     protected readonly _payload: T,
@@ -72,7 +72,7 @@ export class BaseEvent<T = object> implements IEvent<T> {
     return new (this.constructor as any)(this._eventName, this._payload, this._metadata, this._uuid, this._microtime, no);
   }
 
-  public static occur(_aggregateId: string, _payload: object, _uuid: string = uuid(), _microtime: number = microtime.now()) {
+  public static occur<P extends object = object>(_aggregateId: string, _payload: P, _uuid: string = uuid(), _microtime: number = microtime.now()) {
     return new (this as any)(
       this.name,
       _payload,

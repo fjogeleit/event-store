@@ -78,7 +78,7 @@ export interface IEventConstructor<T = object> {
   new (_eventName: string, _payload: T, _metadata: EventMetadata, _uuid?: string, microtime?: number, no?: number): IEvent;
 }
 
-export interface IEvent<T = object> {
+export interface IEvent<T extends object = object> {
   no: number;
   uuid: string;
   name: string;

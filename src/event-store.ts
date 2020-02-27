@@ -30,7 +30,7 @@ export interface PersistenceStrategy {
   deleteStream(streamName: string): Promise<void>;
   createSchema(streamName: string): Promise<void>;
   dropSchema(streamName: string): Promise<void>;
-  appendTo<T = object>(streamName: string, events: IEvent<T>[]): Promise<void>;
+  appendTo<T extends object = object>(streamName: string, events: IEvent<T>[]): Promise<void>;
   load(streamName: string, fromNumber: number, count?: number, matcher?: IMetadataMatcher, middleware?: WrappedMiddleware[]):Promise<AsyncIterable<IEvent>>;
   mergeAndLoad(streams: Array<LoadStreamParameter>, middleware?: WrappedMiddleware[]): Promise<AsyncIterable<IEvent>>;
   hasStream(streamName: string): Promise<boolean>;

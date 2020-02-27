@@ -59,7 +59,7 @@ export class InMemoryPersistenceStrategy implements PersistenceStrategy {
 
   public async dropSchema(streamName: string) {}
 
-  public async appendTo<T = object>(streamName: string, events: IEvent<T>[]) {
+  public async appendTo<T extends object = object>(streamName: string, events: IEvent<T>[]) {
     events = events.sort(
       (a, b) => a.metadata._aggregate_version - b.metadata._aggregate_version
     );
