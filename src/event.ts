@@ -11,7 +11,7 @@ export class BaseEvent<T extends object = object> implements IEvent<T> {
     protected readonly _metadata: EventMetadata,
     protected readonly _uuid: string = uuid(),
     protected readonly _microtime: number = microtime.now(),
-    protected readonly _no: number = 1
+    protected readonly _no: number = 0
   ) {}
 
   get no() {

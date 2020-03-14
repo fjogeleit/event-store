@@ -73,7 +73,7 @@ describe('inMemory/eventStore', () => {
     await eventStore.appendTo('users', events);
 
     expect(eventStore.eventStreams['users'].length).toEqual(2);
-    expect(eventStore.eventStreams['users']).toEqual(events);
+    expect(eventStore.eventStreams['users'].map(event => event.uuid)).toEqual(events.map(event => event.uuid));
 
     done();
   });
@@ -88,7 +88,7 @@ describe('inMemory/eventStore', () => {
 
     const loaded = await eventStore.load('users');
 
-    expect(await iterableToArray(loaded)).toEqual(events);
+    expect((await iterableToArray(loaded)).map(event => event.uuid)).toEqual(events.map(event => event.uuid));
 
     done();
   });
@@ -104,7 +104,7 @@ describe('inMemory/eventStore', () => {
     const events = await eventStore.load('users', 2);
 
     for await (const loadedNameChangeEvent of events) {
-      expect(loadedNameChangeEvent).toEqual(nameChanged);
+      expect(loadedNameChangeEvent.uuid).toEqual(nameChanged.uuid);
     }
 
     done();

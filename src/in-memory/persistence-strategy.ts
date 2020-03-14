@@ -68,6 +68,8 @@ export class InMemoryPersistenceStrategy implements PersistenceStrategy {
 
     for (const event of events) {
       this._eventStreams[streamName].push(event.withNo(no));
+
+      no++;
     }
   }
 
