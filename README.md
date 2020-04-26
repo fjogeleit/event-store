@@ -35,8 +35,8 @@ For a basic overview you can use the code snippets from this example project bel
 
 ### Create the EventStore in your Backend
 
-```
-# main.ts
+```ts
+// main.ts
 
 import { createPostgresEventStore } from 'fj-event-store/postgres';
 
@@ -58,8 +58,8 @@ event-store event-stream:create <streamName>
 ### Create an Aggregate with the related Events using the included Decorator
 
 Create a basic events with immutable values and payload autocomplete
-```
-# model/todo/event/todo-was-added.ts
+```ts
+// model/todo/event/todo-was-added.ts
 
 import { BaseEvent } from 'fj-event-store';
 
@@ -97,8 +97,8 @@ Create and configure an Todo Aggregate with the `AbstractAggregate` Class and `A
 Use Aggregate._recordThat to append a new Event to the EventStream of the Aggregate. its not persisted yet.
 
 Each Aggregate calls internal a method with the name-schema `_when${EventClassName}` if it exist. This Method is normally used to set the new State from the Events in the Aggregate.
-```
-# model/todo/todo.ts
+```ts
+// model/todo/todo.ts
 
 import { AbstractAggregate } from 'fj-event-store';
 import { Aggregate } from 'fj-event-store';
@@ -154,8 +154,8 @@ export class Todo extends AbstractAggregate {
 Create a Repository for your Aggregate.
 Each Repository has 2 methods to save and load aggregates.
 
-```
-# model/todo/todo-repository.ts
+```ts
+// model/todo/todo-repository.ts
 
 import { AggregateRepository, Repository } from 'fj-event-store';
 import { Todo } from './todo';
@@ -166,8 +166,8 @@ export class TodoRepository extends AggregateRepository<Todo> {}
 
 ### Finally use your Aggregate and Repository to create and persist a Todo
 
-```
-# main.ts
+```ts
+// main.ts
 
 import * as uuid from 'uuid/v4'
 import { createInMemoryEventStore } from 'fj-event-store/in-memory';
@@ -201,8 +201,8 @@ import { Todo, TodoRepository } from './todo/model';
 
 Using the AbstractProjection class and configure them with the helper Decorator
 
-```
-# projection/todo/todo-list.ts
+```ts
+// projection/todo/todo-list.ts
 
 import { AbstractProjection, Projection, IProjector } from 'fj-event-store';
 import { TodoWasAdded } from '../../model/todo/event';
@@ -229,9 +229,9 @@ export class TodoListProjection extends AbstractProjection<TodoListState> {
 
 ### Run the projection and get the persisted state
 
-```
-# main.ts
-....
+```ts
+// main.ts
+...
 
 (async () => {
     ...
@@ -248,7 +248,7 @@ export class TodoListProjection extends AbstractProjection<TodoListState> {
 
 The CLI `event-store` supports the usage of EventStore with different helper commands for EventStreams and Projections.
 
-```
+```bash
 Usage: event-store [command] --help
 
 CLI to manage EventStore streams, requires a event-store.config.js config file.
@@ -271,7 +271,7 @@ Commands:
 
 1. A running Postgres DB - You can use the docker-compose.yaml to start a postgres instance as docker container.
 
-```
+```bash
 docker-compose up -d postgres
 ```
 
@@ -281,7 +281,7 @@ docker-compose up -d postgres
 
 ### Running the Example
 
-```
+```bash
 # Install the dependencies (including DEV-dependencies)
 npm install
 
