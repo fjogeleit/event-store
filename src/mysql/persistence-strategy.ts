@@ -296,7 +296,7 @@ export class MysqlPersistenceStrategy implements PersistenceStrategy {
 
     const { where, values } = this.createWhereClause(matcher);
 
-    where.push(`no > ?`);
+    where.push(`no >= ?`);
     values.push(fromNumber);
 
     const whereCondition = `WHERE ${where.join(' AND ')}`;
