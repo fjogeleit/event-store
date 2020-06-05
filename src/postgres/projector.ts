@@ -383,12 +383,10 @@ export class PostgresProjector<T extends IState = IState> implements IProjector<
     let streamPositions = {};
 
     if (this.query.all) {
-      const result = await this.client.query<{ real_stream_name: string }>(
-        `SELECT real_stream_name FROM ${EVENT_STREAMS_TABLE} WHERE real_stream_name NOT LIKE '$%'`
-      );
+      const result = await this.manager.fetchAllStreamNames();
 
-      streamPositions = result.rows.reduce((acc, stream) => {
-        acc[stream.real_stream_name] = 0;
+      streamPositions = result.reduce((acc, streamName) => {
+        acc[streamName] = 0;
 
         return acc;
       }, {});

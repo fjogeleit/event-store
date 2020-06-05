@@ -1,5 +1,5 @@
 import { Pool } from 'mysql';
-import { IReadModelConstructor, PROJECTIONS_TABLE } from '../index';
+import { IReadModelConstructor, PROJECTIONS_TABLE, EVENT_STREAMS_TABLE } from '../index';
 import { MysqlProjector } from './projector';
 import { MysqlParameter } from '../helper';
 import { MysqlReadModelProjector } from './read-model-projector';
@@ -41,6 +41,14 @@ export class MysqlProjectionManager implements IProjectionManager {
 
   fetchAllProjectionNames(): string[] {
     return this.eventStore.registeredProjections;
+  }
+
+  fetchAllStreamNames(): Promise<string[]> {
+    return promisifyQuery<string[]>(
+      this.client,`SELECT real_stream_name FROM ${EVENT_STREAMS_TABLE} WHERE real_stream_name NOT LIKE '$%'`,
+      [],
+      (result) => result.map(result => result.real_stream_name)
+    );
   }
 
   async deleteProjection(name: string, deleteEmittedEvents: boolean = false): Promise<void> {

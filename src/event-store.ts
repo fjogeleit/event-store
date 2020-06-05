@@ -108,8 +108,8 @@ export abstract class EventStore implements IEventStore {
     try {
       await this._persistenceStrategy.createSchema(streamName);
     } catch (error) {
-      await this._persistenceStrategy.dropSchema(streamName);
       await this._persistenceStrategy.removeStreamFromStreamsTable(streamName);
+      await this._persistenceStrategy.dropSchema(streamName);
 
       throw error;
     }

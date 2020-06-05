@@ -400,14 +400,10 @@ export class MysqlProjector<T extends IState = IState> implements IProjector<T> 
     let streamPositions = {};
 
     if (this.query.all) {
-      const result = await promisifyQuery<Array<{ real_stream_name: string }>>(
-        this.client,
-        `SELECT real_stream_name FROM ${EVENT_STREAMS_TABLE} WHERE real_stream_name NOT LIKE '$%'`,
-        []
-      );
+      const result = await this.manager.fetchAllStreamNames();
 
-      streamPositions = result.reduce((acc, stream) => {
-        acc[stream.real_stream_name] = 0;
+      streamPositions = result.reduce((acc, streamName) => {
+        acc[streamName] = 0;
 
         return acc;
       }, {});

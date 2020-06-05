@@ -37,6 +37,8 @@ export interface IProjectionManager {
 
   fetchAllProjectionNames(): string[];
 
+  fetchAllStreamNames(): Promise<string[]>;
+
   fetchProjectionState(name: string): Promise<object>;
 }
 

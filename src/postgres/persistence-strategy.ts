@@ -159,9 +159,9 @@ export class PostgresPersistenceStrategy implements PersistenceStrategy {
     `);
 
     await this.client.query(
-      ` CREATE UNIQUE INDEX ON ${tableName} ((metadata->>'_aggregate_type'), (metadata->>'_aggregate_id'), (metadata->>'_aggregate_version'));`
+      `CREATE UNIQUE INDEX ON ${tableName} ((metadata->>'_aggregate_type'), (metadata->>'_aggregate_id'), (metadata->>'_aggregate_version'));`
     );
-    await this.client.query(` CREATE UNIQUE INDEX ON ${tableName} ((metadata->>'_aggregate_type'), (metadata->>'_aggregate_id'), no);`);
+    await this.client.query(`CREATE UNIQUE INDEX ON ${tableName} ((metadata->>'_aggregate_type'), (metadata->>'_aggregate_id'), no);`);
   }
 
   public async dropSchema(streamName: string) {

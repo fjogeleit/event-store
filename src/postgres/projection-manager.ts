@@ -1,5 +1,5 @@
 import { Pool } from 'pg';
-import { IReadModelConstructor, PROJECTIONS_TABLE } from '../index';
+import { IReadModelConstructor, PROJECTIONS_TABLE, EVENT_STREAMS_TABLE } from '../index';
 import { PostgresProjector } from './projector';
 import { createPostgresClient } from '../helper/postgres';
 import { PostgresReadModelProjector } from './read-model-projector';
@@ -40,6 +40,12 @@ export class PostgresProjectionManager implements IProjectionManager {
 
   fetchAllProjectionNames(): string[] {
     return this.eventStore.registeredProjections;
+  }
+
+  async fetchAllStreamNames(): Promise<string[]> {
+    const { rows } = await this.client.query<{ real_stream_name: string }>(`SELECT real_stream_name FROM ${EVENT_STREAMS_TABLE} WHERE real_stream_name NOT LIKE '$%'`);
+
+    return rows.map(row => row.real_stream_name)
   }
 
   async deleteProjection(name: string, deleteEmittedEvents: boolean = false): Promise<void> {

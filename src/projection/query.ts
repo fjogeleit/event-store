@@ -186,7 +186,7 @@ export class Query<T extends IState> implements IQuery {
     let streamPositions = {};
 
     if (this.query.all) {
-      streamPositions = (await this.manager.fetchAllProjectionNames()).reduce((acc, streamName) => {
+      streamPositions = (await this.manager.fetchAllStreamNames()).reduce((acc, streamName) => {
         acc[streamName] = 0;
 
         return acc;

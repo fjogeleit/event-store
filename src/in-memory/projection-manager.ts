@@ -65,6 +65,10 @@ export class InMemoryProjectionManager implements IProjectionManager {
     return Object.keys(this.projections);
   }
 
+  async fetchAllStreamNames(): Promise<string[]> {
+    return Object.keys(this.eventStore.eventStreams)
+  }
+
   async deleteProjection(name: string, deleteEmittedEvents: boolean = false): Promise<void> {
     return this._updateProjectionStatus(name, deleteEmittedEvents ? ProjectionStatus.DELETING_INCL_EMITTED_EVENTS : ProjectionStatus.DELETING);
   }
