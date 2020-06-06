@@ -122,15 +122,15 @@ export class MysqlReadModelProjector<R extends IReadModel, T extends IState = IS
       this.streamCreated = true;
     }
 
-    this.linkTo(this.name, event);
+    this.eventStore.appendTo(this.name, [event]);
   }
 
   async linkTo(streamName: string, event: IEvent): Promise<void> {
-    if ((await this.eventStore.hasStream(this.name)) === false) {
-      await this.eventStore.createStream(this.name);
+    if ((await this.eventStore.hasStream(streamName)) === false) {
+      await this.eventStore.createStream(streamName);
     }
 
-    await this.eventStore.appendTo(this.name, [event]);
+    await this.eventStore.appendTo(streamName, [event]);
   }
 
   async delete(deleteProjection: boolean = true): Promise<void> {
