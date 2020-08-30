@@ -119,7 +119,7 @@ export interface IQuery<T> {
 
   when(handlers: { [event: string]: (state: T, event: IEvent) => T }): IQuery<T>;
 
-  whenAny(handler: <T extends IState>(state: T, event: IEvent) => T): IQuery<T>;
+  whenAny(handler: (state: T, event: IEvent) => T): IQuery<T>;
 
   reset(): Promise<void>;
 
