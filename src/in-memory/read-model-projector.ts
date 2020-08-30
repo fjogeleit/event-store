@@ -190,7 +190,7 @@ export class InMemoryReadModelProjector<R extends IReadModel, T extends IState =
       throw ProjectorException.noHandler();
     }
 
-    if (!this.state) {
+    if (this.state === undefined) {
       throw ProjectorException.stateWasNotInitialised();
     }
 

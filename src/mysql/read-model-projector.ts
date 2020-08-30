@@ -212,7 +212,7 @@ export class MysqlReadModelProjector<R extends IReadModel, T extends IState = IS
       throw ProjectorException.noHandler();
     }
 
-    if (!this.state) {
+    if (this.state === undefined) {
       throw ProjectorException.stateWasNotInitialised();
     }
 

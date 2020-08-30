@@ -125,7 +125,7 @@ export class Query<T> implements IQuery<T> {
       throw ProjectorException.noHandler();
     }
 
-    if (!this.state) {
+    if (this.state === undefined) {
       throw ProjectorException.stateWasNotInitialised();
     }
 

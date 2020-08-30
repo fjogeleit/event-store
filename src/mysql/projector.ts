@@ -207,7 +207,7 @@ export class MysqlProjector<T extends IState = IState> implements IProjector<T> 
       throw ProjectorException.noHandler();
     }
 
-    if (!this.state) {
+    if (this.state === undefined) {
       throw ProjectorException.stateWasNotInitialised();
     }
 

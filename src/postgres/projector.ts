@@ -198,7 +198,7 @@ export class PostgresProjector<T extends IState = IState> implements IProjector<
       throw ProjectorException.noHandler();
     }
 
-    if (!this.state) {
+    if (this.state === undefined) {
       throw ProjectorException.stateWasNotInitialised();
     }
 
