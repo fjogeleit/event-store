@@ -5,7 +5,7 @@ import { IProjectionManager, IQuery, IState, IStream, ProjectionStatus } from '.
 
 const cloneDeep = require('lodash.clonedeep');
 
-export class Query<T extends IState> implements IQuery {
+export class Query<T> implements IQuery<T> {
   private state?: T;
   private initHandler?: () => T;
   private handlers?: {
@@ -28,7 +28,7 @@ export class Query<T extends IState> implements IQuery {
     private status: ProjectionStatus = ProjectionStatus.IDLE
   ) {}
 
-  init(callback: () => T): IQuery {
+  init(callback: () => T): IQuery<T> {
     if (this.initHandler !== undefined) {
       throw ProjectorException.alreadyInitialized();
     }
@@ -41,7 +41,7 @@ export class Query<T extends IState> implements IQuery {
     return this;
   }
 
-  fromAll(): IQuery {
+  fromAll(): IQuery<T> {
     if (this.query.all || this.query.streams.length > 0) {
       throw ProjectorException.fromWasAlreadyCalled();
     }
@@ -51,7 +51,7 @@ export class Query<T extends IState> implements IQuery {
     return this;
   }
 
-  fromStream(stream: IStream): IQuery {
+  fromStream(stream: IStream): IQuery<T> {
     if (this.query.all || this.query.streams.length > 0) {
       throw ProjectorException.fromWasAlreadyCalled();
     }
@@ -62,7 +62,7 @@ export class Query<T extends IState> implements IQuery {
     return this;
   }
 
-  fromStreams(...streams: IStream[]): IQuery {
+  fromStreams(...streams: IStream[]): IQuery<T> {
     if (this.query.all || this.query.streams.length > 0) {
       throw ProjectorException.fromWasAlreadyCalled();
     }
@@ -77,7 +77,7 @@ export class Query<T extends IState> implements IQuery {
     return this;
   }
 
-  when(handlers: { [p: string]: (state: T, event: IEvent) => T }): IQuery {
+  when(handlers: { [p: string]: (state: T, event: IEvent) => T }): IQuery<T> {
     if (this.handler || this.handlers) {
       throw ProjectorException.whenWasAlreadyCalled();
     }
@@ -89,7 +89,7 @@ export class Query<T extends IState> implements IQuery {
     return this;
   }
 
-  whenAny(handler: (state: T, event: IEvent) => T): IQuery {
+  whenAny(handler: (state: T, event: IEvent) => T): IQuery<T> {
     if (this.handler || this.handlers) {
       throw ProjectorException.whenWasAlreadyCalled();
     }
@@ -116,11 +116,11 @@ export class Query<T extends IState> implements IQuery {
     this.status = ProjectionStatus.IDLE;
   }
 
-  getState(): IState {
+  getState(): T {
     return this.state;
   }
 
-  async run(keepRunning: boolean = false): Promise<void> {
+  async run(): Promise<void> {
     if (!this.handler && !this.handlers) {
       throw ProjectorException.noHandler();
     }

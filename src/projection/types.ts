@@ -21,7 +21,7 @@ export interface IProjectionManager {
 
   createReadModelProjector<R extends IReadModel, T extends IState = IState>(name: string, ReadModel: IReadModelConstructor<R>): IReadModelProjector<R, T>;
 
-  createQuery(): IQuery;
+  createQuery<T>(): IQuery<T>;
 
   deleteProjection(name: string, deleteEmittedEvents?: boolean): Promise<void>;
 
@@ -108,24 +108,24 @@ export interface IReadModelProjector<R extends IReadModel, T extends IState = IS
   progressEvent(event: string): boolean;
 }
 
-export interface IQuery {
-  init(callback: Function): IQuery;
+export interface IQuery<T> {
+  init(callback: Function): IQuery<T>;
 
-  fromStream(stream: IStream): IQuery;
+  fromStream(stream: IStream): IQuery<T>;
 
-  fromStreams(...streams: IStream[]): IQuery;
+  fromStreams(...streams: IStream[]): IQuery<T>;
 
-  fromAll(): IQuery;
+  fromAll(): IQuery<T>;
 
-  when(handlers: { [event: string]: <T extends IState>(state: T, event: IEvent) => T }): IQuery;
+  when(handlers: { [event: string]: (state: T, event: IEvent) => T }): IQuery<T>;
 
-  whenAny(handler: <T extends IState>(state: T, event: IEvent) => T): IQuery;
+  whenAny(handler: <T extends IState>(state: T, event: IEvent) => T): IQuery<T>;
 
   reset(): Promise<void>;
 
   stop(): Promise<void>;
 
-  getState(): IState;
+  getState(): T;
 
   run(): Promise<void>;
 }
