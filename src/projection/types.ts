@@ -109,7 +109,7 @@ export interface IReadModelProjector<R extends IReadModel, T extends IState = IS
 }
 
 export interface IQuery<T> {
-  init(callback: Function): IQuery<T>;
+  init(callback: () => T): IQuery<T>;
 
   fromStream(stream: IStream): IQuery<T>;
 
