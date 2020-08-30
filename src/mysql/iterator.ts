@@ -40,7 +40,7 @@ export class MysqlIterator {
 
         const EventConstructor = this.eventMap[`${metadata._aggregate_type}:${event_name}`] || BaseEvent;
 
-        const event = new EventConstructor(event_name, payload, { ...metadata, stream }, event_id, convertDateTime(created_at), no);
+        const event = new EventConstructor(event_name, payload, { ...metadata, stream }, event_id, convertDateTime(created_at), parseInt(no, 10));
 
         return this.middleware.reduce<Promise<IEvent>>(async (event, handler) => {
             return handler(await event);
