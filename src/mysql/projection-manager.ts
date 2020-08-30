@@ -23,8 +23,8 @@ export class MysqlProjectionManager implements IProjectionManager {
     return new MysqlReadModelProjector<R, T>(name, this, this.eventStore, this.client, ReadModelConstructor);
   }
 
-  createQuery(): IQuery {
-    return new Query(this, this.eventStore);
+  createQuery<T>(): IQuery<T> {
+    return new Query<T>(this, this.eventStore);
   }
 
   async fetchProjectionState(name: string): Promise<object> {

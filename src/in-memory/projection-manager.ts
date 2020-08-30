@@ -45,8 +45,8 @@ export class InMemoryProjectionManager implements IProjectionManager {
     return new InMemoryReadModelProjector<R, T>(name, this, this.eventStore, this.projections, ReadModelConstructor);
   }
 
-  createQuery(): IQuery {
-    return new Query(this, this.eventStore);
+  createQuery<T>(): IQuery<T> {
+    return new Query<T>(this, this.eventStore);
   }
 
   async fetchProjectionState(name: string): Promise<object> {
