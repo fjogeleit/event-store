@@ -46,11 +46,11 @@
     "event-store": "bin/event-store"
   },
   "peerDependencies": {
-    "@types/pg": "^7.11.2",
-    "@types/mysql": "^2.15.7",
+    "@types/pg": "^7.11|^8.0",
+    "@types/mysql": "^2.15",
     "reflect-metadata": "^0.1.13",
-    "pg": "^7.12.1",
-    "mysql": "^2.17.1"
+    "pg": "^7.12|^8.0",
+    "mysql": "^2.17"
   },
   "dependencies": {
     "bind-decorator": "^1.0.11",
