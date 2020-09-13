@@ -17,7 +17,7 @@ export class AggregateRepository<T extends IAggregate> implements IAggregateRepo
   }
 
   public save(aggregate: T) {
-    const events = aggregate.popEvents().map(event => event.withAggregateType(aggregate.constructor.name));
+    const events = aggregate.popEvents();
 
     return this.eventStore.appendTo(this.streamName, events);
   }

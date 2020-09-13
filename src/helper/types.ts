@@ -22,14 +22,6 @@ export interface Client<T> {
   remove(collection: string, identifiers: Identifiers): Promise<void>;
 }
 
-export interface MysqlParameter {
-  host: string;
-  user: string;
-  password: string;
-  database: string;
-  port: number;
-}
-
 export interface Values {
   [column: string]: any;
 }

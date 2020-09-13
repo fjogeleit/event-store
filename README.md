@@ -1,4 +1,4 @@
-# Event-Store v0.4
+# Event-Store v0.6
 
 FJ-EventStore is an EventStore heavily inspired by the prooph/event-store v7.0.
 
@@ -8,6 +8,12 @@ FJ-EventStore is an EventStore heavily inspired by the prooph/event-store v7.0.
 - Persistent Projections
 - ReadModel Projections
 - Event Queries
+
+## Available Driver
+- InMemory
+- Sqlite3
+- PostgreSQL
+- MySQL
 
 ### Projections / Queries
 - You can query and process one or multiple Streams with the `fromStream`, `fromStreams`, `fromAll` API.

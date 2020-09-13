@@ -1,19 +1,19 @@
-import { IEventStore, IEvent, IMetadataMatcher, IReadModelConstructor } from '../';
-import { IProjectionManager, ProjectionStatus, IState, IStream, IReadModel, IReadModelProjector } from '../projection';
-import { Pool } from 'pg';
-import { PROJECTIONS_TABLE } from '../';
+import { IEventStore, IEvent, IMetadataMatcher } from '../types';
+import { IProjectionManager, ProjectionStatus, IProjector, IState, IStream } from '../projection';
+import { PROJECTIONS_TABLE } from '../index';
+import { Database } from 'sqlite3';
 import { ProjectorException, ProjectionNotFound } from '../exception';
-import { PostgresClient } from "../helper/postgres";
+import { promisifyQuery, promisifyRun } from "../helper/sqlite";
 
 const cloneDeep = require('lodash.clonedeep');
 
-export class PostgresReadModelProjector<R extends IReadModel, T extends IState = IState> implements IReadModelProjector<R, T> {
+export class SqliteProjector<T extends IState = IState> implements IProjector<T> {
   private state?: T;
   private initHandler?: () => T;
   private handlers?: {
-    [event: string]: <S extends IEvent>(state: T, event: S) => T | Promise<T>;
+    [event: string]: <R extends IEvent>(state: T, event: R) => T | Promise<T>;
   };
-  private handler?: <S extends IEvent>(state: T, event: S) => T | Promise<T>;
+  private handler?: <R extends IEvent>(state: T, event: R) => T | Promise<T>;
   private metadataMatchers: { [streamName: string]: IMetadataMatcher } = {};
 
   private streamCreated: boolean = false;
@@ -25,7 +25,6 @@ export class PostgresReadModelProjector<R extends IReadModel, T extends IState =
   private lockTimeoutMs: number = 1000;
   private persistBlockSize: number = 1000;
   private updateLockThreshold: number = 0;
-  public readonly readModel: R;
 
   private query: { all: boolean; streams: Array<string> } = {
     all: false,
@@ -36,14 +35,11 @@ export class PostgresReadModelProjector<R extends IReadModel, T extends IState =
     private readonly name: string,
     private readonly manager: IProjectionManager,
     private readonly eventStore: IEventStore,
-    private readonly client: Pool,
-    ReadModelConstructor: IReadModelConstructor<R>,
+    private readonly client: Database,
     private status: ProjectionStatus = ProjectionStatus.IDLE
-  ) {
-    this.readModel = new ReadModelConstructor(new PostgresClient(this.client));
-  }
+  ) {}
 
-  init(callback: () => T): IReadModelProjector<R, T> {
+  init(callback: () => T): IProjector<T> {
     if (this.initHandler !== undefined) {
       throw ProjectorException.alreadyInitialized();
     }
@@ -56,7 +52,7 @@ export class PostgresReadModelProjector<R extends IReadModel, T extends IState =
     return this;
   }
 
-  fromAll(): IReadModelProjector<R, T> {
+  fromAll(): IProjector<T> {
     if (this.query.all || this.query.streams.length > 0) {
       throw ProjectorException.fromWasAlreadyCalled();
     }
@@ -66,7 +62,7 @@ export class PostgresReadModelProjector<R extends IReadModel, T extends IState =
     return this;
   }
 
-  fromStream(stream: IStream): IReadModelProjector<R, T> {
+  fromStream(stream: IStream): IProjector<T> {
     if (this.query.all || this.query.streams.length > 0) {
       throw ProjectorException.fromWasAlreadyCalled();
     }
@@ -77,7 +73,7 @@ export class PostgresReadModelProjector<R extends IReadModel, T extends IState =
     return this;
   }
 
-  fromStreams(...streams: IStream[]): IReadModelProjector<R, T> {
+  fromStreams(...streams: IStream[]): IProjector<T> {
     if (this.query.all || this.query.streams.length > 0) {
       throw ProjectorException.fromWasAlreadyCalled();
     }
@@ -92,7 +88,7 @@ export class PostgresReadModelProjector<R extends IReadModel, T extends IState =
     return this;
   }
 
-  when(handlers: { [p: string]: (state: T, event: IEvent) => T }): IReadModelProjector<R, T> {
+  when(handlers: { [p: string]: (state: T, event: IEvent) => T }): IProjector<T> {
     if (this.handler || this.handlers) {
       throw ProjectorException.whenWasAlreadyCalled();
     }
@@ -104,7 +100,7 @@ export class PostgresReadModelProjector<R extends IReadModel, T extends IState =
     return this;
   }
 
-  whenAny(handler: (state: T, event: IEvent) => T): IReadModelProjector<R, T> {
+  whenAny(handler: (state: T, event: IEvent) => T): IProjector<T> {
     if (this.handler || this.handlers) {
       throw ProjectorException.whenWasAlreadyCalled();
     }
@@ -116,16 +112,16 @@ export class PostgresReadModelProjector<R extends IReadModel, T extends IState =
     return this;
   }
 
-  async emit(event: IEvent): Promise<void> {
+  async emit(event: IEvent<object>): Promise<void> {
     if (this.streamCreated === false && (await this.eventStore.hasStream(this.name)) === false) {
       await this.eventStore.createStream(this.name);
       this.streamCreated = true;
     }
 
-    this.linkTo(this.name, event);
+    this.eventStore.appendTo(this.name, [event]);
   }
 
-  async linkTo(streamName: string, event: IEvent): Promise<void> {
+  async linkTo(streamName: string, event: IEvent<object>): Promise<void> {
     if ((await this.eventStore.hasStream(streamName)) === false) {
       await this.eventStore.createStream(streamName);
     }
@@ -133,15 +129,20 @@ export class PostgresReadModelProjector<R extends IReadModel, T extends IState =
     await this.eventStore.appendTo(streamName, [event]);
   }
 
-  async delete(deleteProjection: boolean = true): Promise<void> {
-    const result = await this.client.query(`DELETE FROM ${PROJECTIONS_TABLE} WHERE "name" = $1`, [this.name]);
+  async delete(deleteEmittedEvents: boolean = false): Promise<void> {
+    const result = await promisifyRun<number>(
+      this.client,
+      `DELETE FROM ${PROJECTIONS_TABLE} WHERE name = ?`,
+      [this.name],
+      (result) => result.changes
+    );
 
-    if (result.rowCount === 0) {
+    if (result === 0) {
       throw ProjectionNotFound.withName(this.name);
     }
 
-    if (deleteProjection) {
-      await this.readModel.delete();
+    if (deleteEmittedEvents) {
+      await this.eventStore.deleteStream(this.name);
     }
 
     this.isStopped = true;
@@ -156,21 +157,23 @@ export class PostgresReadModelProjector<R extends IReadModel, T extends IState =
 
   async reset(): Promise<void> {
     this.streamPositions = {};
-    await this.readModel.reset();
     this.state = undefined;
 
     if (this.initHandler !== undefined) {
       this.state = this.initHandler();
     }
 
-    const result = await this.client.query(`UPDATE ${PROJECTIONS_TABLE} SET status = $1, state = $2, position = $3 WHERE "name" = $4`, [
-      ProjectionStatus.IDLE,
-      JSON.stringify(this.state || {}),
-      JSON.stringify(this.streamPositions),
-      this.name,
-    ]);
+    const result = await promisifyRun<number>(
+      this.client, `UPDATE ${PROJECTIONS_TABLE} SET status = ?, state = ?, position = ? WHERE name = ?`,[
+        ProjectionStatus.IDLE,
+        JSON.stringify(this.state || {}),
+        JSON.stringify(this.streamPositions),
+        this.name,
+      ],
+      (result) => result.changes
+    );
 
-    if (result.rowCount === 0) {
+    if (result === 0) {
       throw ProjectionNotFound.withName(this.name);
     }
 
@@ -233,11 +236,6 @@ export class PostgresReadModelProjector<R extends IReadModel, T extends IState =
     }
 
     await this.acquireLock();
-
-    if ((await this.readModel.isInitialized()) === false) {
-      await this.readModel.init();
-    }
-
     await this.prepareStreamPosition();
     await this.load();
 
@@ -348,16 +346,18 @@ export class PostgresReadModelProjector<R extends IReadModel, T extends IState =
   }
 
   private async persist(): Promise<void> {
-    await this.readModel.persist();
+    const result = await promisifyRun<number>(
+      this.client,
+      `UPDATE ${PROJECTIONS_TABLE} SET locked_until = ?, state = ?, position = ? WHERE name = ?`,[
+        this.createLockUntil(new Date()),
+        JSON.stringify(this.state || {}),
+        JSON.stringify(this.streamPositions),
+        this.name,
+      ],
+      (result) => result.changes
+    );
 
-    const result = await this.client.query(`UPDATE ${PROJECTIONS_TABLE} SET locked_until = $1, state = $2, position = $3 WHERE "name" = $4`, [
-      this.createLockUntil(new Date()),
-      JSON.stringify(this.state || {}),
-      JSON.stringify(this.streamPositions),
-      this.name,
-    ]);
-
-    if (result.rowCount === 0) {
+    if (result === 0) {
       throw ProjectionNotFound.withName(this.name);
     }
   }
@@ -376,20 +376,24 @@ export class PostgresReadModelProjector<R extends IReadModel, T extends IState =
   }
 
   private async load(): Promise<void> {
-    const result = await this.client.query<{
-      position: { [streamName: string]: number };
-      state: T;
-    }>(`SELECT position, state FROM ${PROJECTIONS_TABLE} WHERE name = $1 LIMIT 1`, [this.name]);
+    const result = await promisifyQuery<Array<{
+      position: string;
+      state: string;
+    }>>(
+      this.client,
+      `SELECT position, state FROM ${PROJECTIONS_TABLE} WHERE name = ? LIMIT 1`,
+      [this.name]
+    );
 
-    if (result.rowCount === 0) {
+    if (result.length === 0) {
       throw ProjectionNotFound.withName(this.name);
     }
 
     this.streamPositions = {
       ...this.streamPositions,
-      ...result.rows[0].position,
+      ...JSON.parse(result[0].position) as { [streamName: string]: number },
     };
-    this.state = { ...result.rows[0].state };
+    this.state = JSON.parse(result[0].state) as T;
   }
 
   private async prepareStreamPosition(): Promise<void> {
@@ -398,8 +402,8 @@ export class PostgresReadModelProjector<R extends IReadModel, T extends IState =
     if (this.query.all) {
       const result = await this.manager.fetchAllStreamNames();
 
-      streamPositions = result.reduce((acc, stream) => {
-        acc[stream] = 0;
+      streamPositions = result.reduce((acc, streamName) => {
+        acc[streamName] = 0;
 
         return acc;
       }, {});
@@ -428,13 +432,17 @@ export class PostgresReadModelProjector<R extends IReadModel, T extends IState =
     this.isStopped = false;
     const now = new Date();
 
-    const result = await this.client.query(`UPDATE ${PROJECTIONS_TABLE} SET locked_until = $1, status = $2 WHERE "name" = $4`, [
-      this.createLockUntil(now),
-      ProjectionStatus.RUNNING,
-      this.name,
-    ]);
+    const result = await promisifyRun<number>(
+      this.client,
+      `UPDATE ${PROJECTIONS_TABLE} SET locked_until = ?, status = ? WHERE name = ?`,[
+        this.createLockUntil(now),
+        ProjectionStatus.RUNNING,
+        this.name,
+      ],
+      (result) => result.changes
+    );
 
-    if (result.rowCount === 0) {
+    if (result === 0) {
       throw ProjectionNotFound.withName(this.name);
     }
 
@@ -443,23 +451,29 @@ export class PostgresReadModelProjector<R extends IReadModel, T extends IState =
   }
 
   private async projectionExists(): Promise<boolean> {
-    const result = await this.client.query<{ name: string }>(`SELECT name FROM ${PROJECTIONS_TABLE} WHERE name = $1;`, [this.name]);
+    const result = await promisifyQuery<number>(
+      this.client,
+      `SELECT name FROM ${PROJECTIONS_TABLE} WHERE name = ?;`,
+      [this.name],
+      (result) => result.length
+    );
 
-    return result.rowCount === 1;
+    return result === 1;
   }
 
-  private async createProjection(): Promise<void> {
-    await this.client.query(`INSERT INTO ${PROJECTIONS_TABLE} (name, position, state, status, locked_until) VALUES ($1, '{}', '{}', $2, NULL)`, [
+  async createProjection(): Promise<void> {
+    return promisifyQuery<void>(this.client, `INSERT INTO ${PROJECTIONS_TABLE} (name, position, state, status, locked_until) VALUES (?, '{}', '{}', ?, NULL)`, [
       this.name,
       this.status,
-    ]);
+    ], () => {});
   }
 
   private async acquireLock(): Promise<void> {
     const now = new Date();
 
-    await this.client.query(
-      `UPDATE ${PROJECTIONS_TABLE} SET locked_until = $1, status = $2 WHERE name = $3 AND (locked_until IS NULL OR locked_until < $4)`,
+    await promisifyQuery<void>(
+      this.client,
+      `UPDATE ${PROJECTIONS_TABLE} SET locked_until = ?, status = ? WHERE name = ? AND (locked_until IS NULL OR locked_until < ?)`,
       [this.createLockUntil(now), ProjectionStatus.RUNNING, this.name, now]
     );
 
@@ -474,13 +488,21 @@ export class PostgresReadModelProjector<R extends IReadModel, T extends IState =
       return;
     }
 
-    await this.client.query(`UPDATE ${PROJECTIONS_TABLE} SET locked_until = $1 WHERE name = $2;`, [this.createLockUntil(now), this.name]);
+    await promisifyQuery<void>(
+      this.client,
+      `UPDATE ${PROJECTIONS_TABLE} SET locked_until = ? WHERE name = ?;`,
+      [this.createLockUntil(now), this.name]
+    );
 
     this.lastLockUpdate = now;
   }
 
   private async releaseLock() {
-    await this.client.query(`UPDATE ${PROJECTIONS_TABLE} SET locked_until = NULL, status = $1 WHERE name = $2`, [ProjectionStatus.IDLE, this.name]);
+    await promisifyQuery<void>(
+      this.client,
+      `UPDATE ${PROJECTIONS_TABLE} SET locked_until = NULL, status = ? WHERE name = ?`,
+      [ProjectionStatus.IDLE, this.name]
+    );
   }
 
   private createLockUntil(from: Date) {

@@ -12,7 +12,7 @@ import { Pool, types } from 'pg';
 import * as format from 'pg-format';
 import { createPostgresClient } from '../helper/postgres';
 import { PostgresWriteLockStrategy } from './write-lock-strategy';
-import { PersistenceStrategy, WrappedMiddleware } from '../event-store';
+import { PersistenceStrategy } from '../event-store';
 import { StreamAlreadyExists, StreamNotFound, ConcurrencyException } from '../exception';
 import { EVENT_STREAMS_TABLE, PROJECTIONS_TABLE } from '../index';
 import { PostgresOptions } from "./types";
@@ -210,7 +210,7 @@ export class PostgresPersistenceStrategy implements PersistenceStrategy {
     }
   }
 
-  public async load(streamName: string, fromNumber: number, count?: number, matcher?: IMetadataMatcher, middleware: WrappedMiddleware[] = []): Promise<AsyncIterable<IEvent>> {
+  public async load(streamName: string, fromNumber: number, count?: number, matcher?: IMetadataMatcher): Promise<AsyncIterable<IEvent>> {
     const { query, values } = await this.createQuery(streamName, fromNumber, matcher);
     const queryConfig = {
       text: query,
@@ -219,12 +219,10 @@ export class PostgresPersistenceStrategy implements PersistenceStrategy {
       types: { getTypeParser },
     };
 
-    const iterator = new PostgresIterator(this.client, queryConfig, this.eventMap, middleware);
-
-    return iterator.iterator;
+    return new PostgresIterator(this.client, queryConfig, this.eventMap);
   }
 
-  public async mergeAndLoad(streams: Array<LoadStreamParameter>, middleware: WrappedMiddleware[] = []): Promise<AsyncIterable<IEvent>> {
+  public async mergeAndLoad(streams: Array<LoadStreamParameter>): Promise<AsyncIterable<IEvent>> {
     let paramCounter = 0;
     let queries = [];
     let parameters = [];
@@ -252,9 +250,7 @@ export class PostgresPersistenceStrategy implements PersistenceStrategy {
       types: { getTypeParser },
     };
 
-    const iterator = new PostgresIterator(this.client, queryConfig, this.eventMap, middleware);
-
-    return iterator.iterator;
+    return new PostgresIterator(this.client, queryConfig, this.eventMap);
   }
 
   private async createQuery(streamName: string, fromNumber: number, matcher?: IMetadataMatcher, paramCounter = 0) {

@@ -1,5 +1,5 @@
 import { Configuration, Options } from "../types";
-import { MysqlParameter } from "../helper";
+import { MysqlParameter } from "../helper/mysql";
 
 export interface MysqlConfiguration extends Configuration {
   connection: MysqlParameter;

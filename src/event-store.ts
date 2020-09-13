@@ -12,6 +12,7 @@ import {
 
 import { IAggregate, IAggregateConstructor, AggregateRepository } from './aggregate';
 import { ProjectionNotFound } from './exception';
+import { MiddlewareIterator } from './middleware/iterator';
 
 interface MiddlewareCollection {
   [EventAction.APPEND_ERRORED]: EventCallback[];
@@ -31,8 +32,8 @@ export interface PersistenceStrategy {
   createSchema(streamName: string): Promise<void>;
   dropSchema(streamName: string): Promise<void>;
   appendTo<T extends object = object>(streamName: string, events: IEvent<T>[]): Promise<void>;
-  load(streamName: string, fromNumber: number, count?: number, matcher?: IMetadataMatcher, middleware?: WrappedMiddleware[]):Promise<AsyncIterable<IEvent>>;
-  mergeAndLoad(streams: Array<LoadStreamParameter>, middleware?: WrappedMiddleware[]): Promise<AsyncIterable<IEvent>>;
+  load(streamName: string, fromNumber: number, count?: number, matcher?: IMetadataMatcher):Promise<AsyncIterable<IEvent>>;
+  mergeAndLoad(streams: Array<LoadStreamParameter>): Promise<AsyncIterable<IEvent>>;
   hasStream(streamName: string): Promise<boolean>;
   deleteStream(streamName: string): Promise<void>;
 }
@@ -149,14 +150,14 @@ export abstract class EventStore implements IEventStore {
     const middlewareWrapper = (handler: EventCallback, action: EventAction) => (event: IEvent) => handler(event, action, this);
     const middleware = this.middleware[EventAction.LOADED].map((handler) => middlewareWrapper(handler, EventAction.LOADED));
 
-    return this._persistenceStrategy.load(streamName, fromNumber, undefined, metadataMatcher, middleware);
+    return new MiddlewareIterator(await this._persistenceStrategy.load(streamName, fromNumber, undefined, metadataMatcher), middleware);
   }
 
   public async mergeAndLoad(...streams: LoadStreamParameter[]): Promise<AsyncIterable<IEvent>> {
     const middlewareWrapper = (handler: EventCallback, action: EventAction) => (event: IEvent) => handler(event, action, this);
     const middleware = this.middleware[EventAction.LOADED].map((handler) => middlewareWrapper(handler, EventAction.LOADED));
 
-    return await this._persistenceStrategy.mergeAndLoad(streams, middleware);
+    return new MiddlewareIterator(await this._persistenceStrategy.mergeAndLoad(streams), middleware);
   }
 
   public hasStream(streamName: string): Promise<boolean> {

@@ -29,6 +29,12 @@ const getEventStore = () => {
     eventStore = createMysqlEventStore(config);
   }
 
+  if (config.driver === 'sqlite') {
+    const { createSqliteEventStore } = require('../dist/sqlite')
+
+    eventStore = createSqliteEventStore(config);
+  }
+
   return eventStore.install();
 }
 

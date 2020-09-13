@@ -1,8 +1,7 @@
 import { Pool } from 'pg';
 import bind from 'bind-decorator';
-import { IEvent, IEventConstructor } from '../types';
+import { IEventConstructor, IEvent } from '../types';
 import { BaseEvent } from "../event";
-import { WrappedMiddleware } from "../event-store";
 
 export class PostgresIterator {
     private limit = 1000;
@@ -12,8 +11,7 @@ export class PostgresIterator {
     constructor(
         private client: Pool,
         private params: { text: string; values: any[], types: any },
-        private readonly eventMap: { [aggregateEvent: string]: IEventConstructor },
-        private readonly middleware: WrappedMiddleware[] = []) {}
+        private readonly eventMap: { [aggregateEvent: string]: IEventConstructor }) {}
 
     @bind
     private async fetchEvents() {
@@ -26,32 +24,22 @@ export class PostgresIterator {
         return rows;
     }
 
-    get iterator(): AsyncIterable<IEvent> {
-        const _iterator = this;
+    private async *generatorWrapper(): AsyncGenerator<IEvent> {
+        if (this.done) return;
 
-        const generatorWrapper = async function* () {
-            if (_iterator.done) return;
+        const events = await this.fetchEvents();
 
-            const events = await _iterator.fetchEvents();
+        if (!events.length) return;
 
-            if (!events.length) return;
-
-            for (const { event_id, payload, event_name, metadata, created_at, stream, no } of events) {
-                const EventConstructor = _iterator.eventMap[`${metadata._aggregate_type}:${event_name}`] || BaseEvent;
-                const _event = new EventConstructor(event_name, payload, { ...metadata, stream }, event_id, created_at, parseInt(no, 10));
-
-                yield _iterator.middleware.reduce<Promise<IEvent>>(async (event, handler) => {
-                    return handler(await event);
-                }, Promise.resolve(_event));
-            }
-
-            yield* generatorWrapper();
-        };
-
-        return {
-            [Symbol.asyncIterator]: async function* () {
-                yield* generatorWrapper();
-            }
+        for (const { event_id, payload, event_name, metadata, created_at, stream, no } of events) {
+            const EventConstructor = this.eventMap[`${metadata._aggregate_type}:${event_name}`] || BaseEvent;
+            yield new EventConstructor(event_name, payload, { ...metadata, stream }, event_id, created_at, parseInt(no, 10));
         }
+
+        yield* this.generatorWrapper();
+    }
+
+    async *[Symbol.asyncIterator]() {
+        yield* this.generatorWrapper();
     }
 }

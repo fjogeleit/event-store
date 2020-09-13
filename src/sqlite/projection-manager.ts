@@ -1,26 +1,25 @@
-import { Pool } from 'mysql';
+import { Database } from 'sqlite3';
 import { IReadModelConstructor, PROJECTIONS_TABLE, EVENT_STREAMS_TABLE } from '../index';
-import { MysqlProjector } from './projector';
-import { MysqlParameter } from '../helper/mysql';
-import { MysqlReadModelProjector } from './read-model-projector';
+import { SqliteProjector } from './projector';
+import { SqliteReadModelProjector } from './read-model-projector';
 import { ProjectionNotFound } from '../exception';
 import { IEventStore } from '../types';
 import { Query, IProjectionManager, ProjectionStatus, IProjector, IQuery, IState, IReadModel, IReadModelProjector } from '../projection';
-import { createMysqlPool, promisifyQuery } from "../helper/mysql";
+import { promisifyQuery, createSqlitelPool } from "../helper/sqlite";
 
-export class MysqlProjectionManager implements IProjectionManager {
-  private readonly client: Pool;
+export class SqliteProjectionManager implements IProjectionManager {
+  private readonly client: Database;
 
-  constructor(readonly connection: MysqlParameter, private readonly eventStore: IEventStore) {
-    this.client = createMysqlPool(connection);
+  constructor(readonly connectionString: string, private readonly eventStore: IEventStore) {
+    this.client = createSqlitelPool(connectionString);
   }
 
   createProjector<T extends IState = IState>(name: string): IProjector<T> {
-    return new MysqlProjector(name, this, this.eventStore, this.client);
+    return new SqliteProjector(name, this, this.eventStore, this.client);
   }
 
   createReadModelProjector<R extends IReadModel, T extends IState = IState>(name: string, ReadModelConstructor: IReadModelConstructor<R>): IReadModelProjector<R, T> {
-    return new MysqlReadModelProjector<R, T>(name, this, this.eventStore, this.client, ReadModelConstructor);
+    return new SqliteReadModelProjector<R, T>(name, this, this.eventStore, this.client, ReadModelConstructor);
   }
 
   createQuery<T>(): IQuery<T> {

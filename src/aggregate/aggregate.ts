@@ -10,7 +10,9 @@ export abstract class AbstractAggregate implements IAggregate {
   protected _recordThat(event) {
     this._version += 1;
 
-    event = event.withVersion(this._version);
+    event = event
+      .withVersion(this._version)
+      .withAggregateType(this.constructor.name);
 
     this._recordedEvents.push(event);
     this._apply(event);

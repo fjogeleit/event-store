@@ -1,5 +1,13 @@
-import { Client, Identifiers, Values, MysqlParameter } from './types';
+import { Client, Identifiers, Values } from './types';
 import { Pool, createPool } from 'mysql';
+
+export interface MysqlParameter {
+  host: string;
+  user: string;
+  password: string;
+  database: string;
+  port: number;
+}
 
 let client: Pool = null;
 

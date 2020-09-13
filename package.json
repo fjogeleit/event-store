@@ -1,6 +1,6 @@
 {
   "name": "fj-event-store",
-  "version": "0.5.3",
+  "version": "0.6.0",
   "description": "A EventStore for NodeJS inspired from the prooph/event-store v7.",
   "author": "Frank Jogeleit <frank.jogeleit@webdev-jogeleit.de>",
   "license": "MIT",
@@ -24,6 +24,8 @@
     "ddd",
     "eventsourcing",
     "postgres",
+    "mysql",
+    "sqlite3",
     "inmemory"
   ],
   "devDependencies": {
@@ -48,9 +50,11 @@
   "peerDependencies": {
     "@types/pg": "^7.11|^8.0",
     "@types/mysql": "^2.15",
+    "@types/sqlite3": "3.1.6",
     "reflect-metadata": "^0.1.13",
     "pg": "^7.12|^8.0",
-    "mysql": "^2.17"
+    "mysql": "^2.17",
+    "sqlite3": "^5.0.0"
   },
   "dependencies": {
     "bind-decorator": "^1.0.11",

@@ -15,6 +15,7 @@ export enum Driver {
   POSTGRES = 'postgres',
   IN_MEMORY = 'in_memory',
   MYSQL = 'mysql',
+  SQLITE = 'sqlite',
 }
 
 export interface LoadStreamParameter {

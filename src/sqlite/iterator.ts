@@ -1,8 +1,8 @@
-import { Pool } from 'mysql';
+import { Database } from 'sqlite3';
 import bind from 'bind-decorator';
 import { IEvent, IEventConstructor } from '../types';
 import { BaseEvent } from "../event";
-import { promisifyQuery } from "../helper/mysql";
+import { promisifyQuery } from "../helper/sqlite";
 
 const convertDateTime = (dateTimeString: string): number => {
     const date = new Date(dateTimeString);
@@ -10,13 +10,13 @@ const convertDateTime = (dateTimeString: string): number => {
     return (date.getTime() + offset) * 1000 + parseInt(dateTimeString.substring(dateTimeString.length - 3));
 };
 
-export class MysqlIterator {
+export class SqliteIterator {
     private limit = 1000;
     private offset = 0;
     private done = false;
 
     constructor(
-        private client: Pool,
+        private client: Database,
         private params: { query: string; values: any[] },
         private readonly eventMap: { [aggregateEvent: string]: IEventConstructor }) {}
 

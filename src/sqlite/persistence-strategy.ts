@@ -4,18 +4,16 @@ import {
   IEventConstructor,
   LoadStreamParameter,
   IMetadataMatcher,
-  MetadataOperator,
-  WriteLockStrategy
+  MetadataOperator
 } from '../types';
 
-import { Pool } from 'mysql';
-import { createMysqlPool, promisifyQuery } from '../helper/mysql';
-import { MysqlWriteLockStrategy } from './write-lock-strategy';
-import { PersistenceStrategy, WrappedMiddleware } from '../event-store';
+import { Database } from 'sqlite3';
+import { createSqlitelPool, promisifyQuery, promisifyRun } from '../helper/sqlite';
+import { PersistenceStrategy } from '../event-store';
 import { StreamAlreadyExists, StreamNotFound } from '../exception';
 import { EVENT_STREAMS_TABLE, PROJECTIONS_TABLE } from '../index';
-import { MysqlOptions } from "./types";
-import { MysqlIterator } from "./iterator";
+import { SqliteOptions } from "./types";
+import { SqliteIterator } from "./iterator";
 
 const sha1 = require('js-sha1');
 
@@ -23,14 +21,12 @@ const generateTable = (streamName: string): string => {
   return `_${sha1(streamName)}`;
 };
 
-export class MysqlPersistenceStrategy implements PersistenceStrategy {
-  private readonly client: Pool;
+export class SqlitePersistenceStrategy implements PersistenceStrategy {
+  private readonly client: Database;
   private readonly eventMap: { [aggregateEvent: string]: IEventConstructor };
-  private readonly writeLock: WriteLockStrategy;
 
-  constructor(private readonly options: MysqlOptions) {
-    this.client = createMysqlPool(options.connection);
-    this.writeLock = new MysqlWriteLockStrategy(this.client);
+  constructor(private readonly options: SqliteOptions) {
+    this.client = createSqlitelPool(options.connectionString);
 
     this.eventMap = this.options.registry.aggregates.reduce((eventMap, aggregate) => {
       const items = aggregate.registeredEvents().reduce<{ [aggregateEvent: string]: IEventConstructor }>((item, event) => {
@@ -43,11 +39,15 @@ export class MysqlPersistenceStrategy implements PersistenceStrategy {
     }, {});
   }
 
+  public async close() {
+    this.client.close();
+  }
+
   public async createEventStreamsTable() {
     try {
       const result = await promisifyQuery<number>(
         this.client,
-        'SHOW TABLES LIKE ?',
+        `SELECT name FROM sqlite_master WHERE type = 'table' AND name LIKE ?`,
         [EVENT_STREAMS_TABLE],
         (result: Array<any>) => result.length
       );
@@ -56,19 +56,16 @@ export class MysqlPersistenceStrategy implements PersistenceStrategy {
         return;
       }
 
-      await promisifyQuery<void>(
+      await promisifyRun(
         this.client,
         `
           CREATE TABLE ${EVENT_STREAMS_TABLE} (
-            no BIGINT(20) NOT NULL AUTO_INCREMENT,
+            no INTEGER PRIMARY KEY AUTOINCREMENT,
             real_stream_name VARCHAR(150) NOT NULL,
-            stream_name CHAR(41) NOT NULL,
+            stream_name VARCHAR(41) NOT NULL,
             metadata JSON,
-            PRIMARY KEY (no),
-            UNIQUE KEY ix_rsn (real_stream_name)
-          ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;`,
-        [],
-        () => {}
+            UNIQUE (real_stream_name)
+          )`
       );
     } catch (e) {
       console.error('Failed to install EventStreams Table: %s', e.toString(), e.stack);
@@ -79,7 +76,7 @@ export class MysqlPersistenceStrategy implements PersistenceStrategy {
     try {
       const result = await promisifyQuery<number>(
         this.client,
-        'SHOW TABLES LIKE ?',
+        `SELECT name FROM sqlite_master WHERE type = 'table' AND name LIKE ?`,
         [PROJECTIONS_TABLE],
         (result) => result.length
       );
@@ -92,15 +89,14 @@ export class MysqlPersistenceStrategy implements PersistenceStrategy {
         this.client,
         `
           CREATE TABLE ${PROJECTIONS_TABLE} (
-            no BIGINT(20) NOT NULL AUTO_INCREMENT,
+            no INTEGER PRIMARY KEY AUTOINCREMENT,
             name VARCHAR(150) NOT NULL,
             position JSON,
             state JSON,
             status VARCHAR(28) NOT NULL,
             locked_until CHAR(26),
-            PRIMARY KEY (no),
-            UNIQUE KEY ix_name (name)
-          ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;`,
+            UNIQUE (name)
+          )`,
         [],
         () => {}
       );
@@ -113,15 +109,10 @@ export class MysqlPersistenceStrategy implements PersistenceStrategy {
     const tableName = generateTable(streamName);
 
     try {
-      await promisifyQuery<void>(
+      await promisifyRun(
         this.client,
-        `INSERT INTO ${EVENT_STREAMS_TABLE} SET ?`,
-        {
-          real_stream_name: streamName,
-          stream_name: tableName,
-          metadata: JSON.stringify([]),
-        },
-        () => {}
+        `INSERT INTO ${EVENT_STREAMS_TABLE} (real_stream_name, stream_name, metadata) VALUES (?, ?, ?)`,
+        [streamName, tableName, '[]']
       );
     } catch (error) {
       if (error.code === '23000') {
@@ -133,11 +124,10 @@ export class MysqlPersistenceStrategy implements PersistenceStrategy {
   }
 
   public async removeStreamFromStreamsTable(streamName: string) {
-    await promisifyQuery<void>(
+    await promisifyRun(
       this.client,
       `DELETE FROM ${EVENT_STREAMS_TABLE} WHERE real_stream_name = ?`,
       [streamName],
-      () => {}
     );
   }
 
@@ -160,28 +150,25 @@ export class MysqlPersistenceStrategy implements PersistenceStrategy {
   public async createSchema(streamName: string) {
     const tableName = generateTable(streamName);
 
-    await this.client.query(`
-      CREATE TABLE ${tableName} (
-        no BIGINT(20) NOT NULL AUTO_INCREMENT,
-        event_id CHAR(36) COLLATE utf8mb4_bin NOT NULL,
-        event_name VARCHAR(100) COLLATE utf8mb4_bin NOT NULL,
+    await promisifyRun(
+      this.client,
+      `CREATE TABLE ${tableName} (
+        no INTEGER PRIMARY KEY AUTOINCREMENT,
+        event_id CHAR(36) NOT NULL,
+        event_name VARCHAR(100) NOT NULL,
         payload JSON NOT NULL,
         metadata JSON NOT NULL,
         created_at DATETIME(6) NOT NULL,
-        aggregate_version INT(11) UNSIGNED GENERATED ALWAYS AS (JSON_EXTRACT(metadata, '$._aggregate_version')) STORED NOT NULL,
-        aggregate_id CHAR(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin GENERATED ALWAYS AS (JSON_UNQUOTE(JSON_EXTRACT(metadata, '$._aggregate_id'))) STORED NOT NULL,
-        aggregate_type VARCHAR(150) GENERATED ALWAYS AS (JSON_UNQUOTE(JSON_EXTRACT(metadata, '$._aggregate_type'))) STORED NOT NULL,
-        PRIMARY KEY (no),
-        UNIQUE KEY ix_event_id (event_id),
-        UNIQUE KEY ix_unique_event (aggregate_type, aggregate_id, aggregate_version),
-        KEY ix_query_aggregate (aggregate_type,aggregate_id,no)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;`);
+        aggregate_version INTEGER GENERATED ALWAYS AS (JSON_EXTRACT(metadata, '$._aggregate_version')) STORED NOT NULL,
+        aggregate_id CHAR(36) GENERATED ALWAYS AS (JSON_EXTRACT(metadata, '$._aggregate_id')) STORED NOT NULL,
+        aggregate_type VARCHAR(150) GENERATED ALWAYS AS (JSON_EXTRACT(metadata, '$._aggregate_type')) STORED NOT NULL,
+        UNIQUE (event_id),
+        UNIQUE (aggregate_type, aggregate_id, aggregate_version)
+    )`);
   }
 
   public async dropSchema(streamName: string) {
-    const tableName = generateTable(streamName);
-
-    await this.client.query(`DROP TABLE IF EXISTS ${tableName};`);
+    return promisifyRun(this.client, `DROP TABLE IF EXISTS ${generateTable(streamName)};`);
   }
 
   public async appendTo<T extends object = object>(streamName: string, events: IEvent<T>[]) {
@@ -194,72 +181,32 @@ export class MysqlPersistenceStrategy implements PersistenceStrategy {
       metadata: JSON.stringify(event.metadata),
       created_at: event.createdAt.toISOString(),
     }));
+    
+    return new Promise<void>((resolve, reject) => {
+      this.client.serialize(() => {
+        const stmt = this.client.prepare(`INSERT INTO ${tableName} (event_id, event_name, payload, metadata, created_at) VALUES (?, ?, ?, ?, ?);`);
 
-    const lock = `${tableName}_write_lock`;
+        data.forEach(event => stmt.run([event.event_id, event.event_name, event.payload, event.metadata, event.created_at]));
 
-    if (await this.writeLock.createLock(lock) === false) {
-      throw new Error('Concurrency Error: Failed to acquire lock for writing to stream');
-    }
-
-    try {
-      await new Promise((resolve, reject) => {
-        this.client.getConnection((error, connection) => {
+        stmt.finalize((error) => {
           if (error) {
             reject(error);
             return;
           }
 
-          connection.beginTransaction((error) => {
-            if (error) {
-              reject(error);
-              return;
-            }
-
-            connection.query(`INSERT INTO ${ tableName } SET ?`, data, (error) => {
-              if (error) {
-                connection.rollback(error => {
-                  connection.release();
-                  reject(error);
-                });
-
-                connection.release();
-                reject(error);
-                return;
-              }
-
-              connection.commit((error) => {
-                if (error) {
-                  connection.rollback(error => {
-                    connection.release();
-                    reject(error);
-                  });
-
-                  connection.release();
-                  reject(error);
-                  return;
-                }
-
-                connection.release();
-                resolve();
-              });
-            })
-          });
-        });
+          resolve()
+        })
       });
-    } catch (error) {
-      throw error
-    } finally {
-      await this.writeLock.releaseLock(lock);
-    }
+    });
   }
 
   public async load(streamName: string, fromNumber: number, count?: number, matcher?: IMetadataMatcher): Promise<AsyncIterable<IEvent>> {
     const { query, values } = await this.createQuery(streamName, fromNumber, matcher);
 
-    return new MysqlIterator(this.client, { query, values }, this.eventMap);
+    return new SqliteIterator(this.client, { query, values }, this.eventMap);
   }
 
-  public async mergeAndLoad(streams: Array<LoadStreamParameter>, middleware: WrappedMiddleware[] = []) {
+  public async mergeAndLoad(streams: Array<LoadStreamParameter>) {
     let queries = [];
     let parameters = [];
 
@@ -273,12 +220,14 @@ export class MysqlPersistenceStrategy implements PersistenceStrategy {
     let query = queries[0];
 
     if (queries.length > 1) {
-      query = queries.map(query => `(${query})`).join(' UNION ALL ') + ' ORDER BY created_at ASC';
+      query = queries.map(query => query).join(' UNION ALL ') + ' ORDER BY created_at ASC';
     }
 
     const values = parameters.reduce<Array<any>>((params, values) => [...params, ...values], []);
 
-    return new MysqlIterator(this.client, { query, values }, this.eventMap);
+    const iterator = new SqliteIterator(this.client, { query, values }, this.eventMap);
+
+    return iterator;
   }
 
   private async createQuery(streamName: string, fromNumber: number, matcher?: IMetadataMatcher) {
@@ -298,7 +247,7 @@ export class MysqlPersistenceStrategy implements PersistenceStrategy {
     const whereCondition = `WHERE ${where.join(' AND ')}`;
 
     return {
-      query: `SELECT *, '${streamName}' as stream FROM ${tableName} ${whereCondition} ORDER BY no ASC`,
+      query: `SELECT *, '${streamName}' as stream FROM ${tableName} ${whereCondition}`,
       values,
     };
   }
