@@ -140,3 +140,26 @@ export interface MetadataMatch<T extends MetadataOperator> {
 export interface IMetadataMatcher {
   data: MetadataMatch<MetadataOperator>[];
 }
+
+export type Constructor<T> = {
+  // tslint:disable-next-line:no-any
+  new(...args: any[]): T
+};
+
+// From the TC39 Decorators proposal
+export interface ClassDescriptor {
+  kind: 'class';
+  elements: ClassElement[];
+  finisher?: <T>(clazz: Constructor<T>) => undefined | Constructor<T>;
+}
+
+// From the TC39 Decorators proposal
+export interface ClassElement {
+  kind: 'field' | 'method';
+  key: PropertyKey;
+  placement: 'static' | 'prototype' | 'own';
+  initializer?: Function;
+  extras?: ClassElement[];
+  finisher?: <T>(clazz: Constructor<T>) => undefined | Constructor<T>;
+  descriptor?: PropertyDescriptor;
+}
