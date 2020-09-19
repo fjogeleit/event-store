@@ -1,6 +1,6 @@
 import 'reflect-metadata';
-import { IAggregateConstructor, IAggregateRepositoryConstructor } from './aggregate';
-import { AGGREGATE, PROJECTION, READ_MODEL_PROJECTION, REPOSITORY } from './decorator';
+import { IAggregateConstructor, IAggregateRepositoryConstructor } from './aggregate/types';
+import { AGGREGATE, PROJECTION, READ_MODEL_PROJECTION, REPOSITORY } from './decorator/constants';
 import {
   IProjectionConstructor,
   IReadModel,

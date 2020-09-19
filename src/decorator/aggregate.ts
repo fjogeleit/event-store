@@ -1,5 +1,5 @@
 import { IEventConstructor } from '../types';
-import { AGGREGATE } from './';
+import { AGGREGATE } from './constants';
 import { Registry } from '../registry';
 import { IAggregateConstructor } from '../aggregate';
 

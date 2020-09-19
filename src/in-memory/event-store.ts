@@ -1,7 +1,9 @@
 import { EventStore } from '../event-store';
-import { IEvent, Options } from '../';
-import { InMemoryPersistenceStrategy, InMemoryProjectionManager, InMemoryConfiguration } from './';
-import { IProjectionManager } from '../projection';
+import { IEvent, Options } from '../types';
+import { InMemoryConfiguration } from './types';
+import { InMemoryPersistenceStrategy } from './persistence-strategy';
+import { InMemoryProjectionManager } from './projection-manager';
+import { IProjectionManager } from '../projection/types';
 import { Registry } from "../registry";
 
 export class InMemoryEventStore extends EventStore {
