@@ -25,24 +25,24 @@ const legacyClass = ({ streamName, aggregate }, clazz: Constructor<any>) => {
   };
 
 const standardClass = ({ streamName, aggregate }, descriptor: ClassDescriptor) => {
-    const { kind, elements } = descriptor;
-    return {
-      kind,
-      elements,
-      // This callback is called once the class is otherwise fully defined
-      finisher(clazz: Constructor<any>) {
-        clazz.prototype.streamName = streamName;
-        clazz.prototype.aggregate = aggregate;
+  // This callback is called once the class is otherwise fully defined
+  descriptor.finisher = function(clazz: Constructor<any>) {
+      clazz.prototype.streamName = streamName;
+      clazz.prototype.aggregate = aggregate;
 
-        Reflect.defineMetadata(REPOSITORY, [...(Reflect.getMetadata(REPOSITORY, Registry) || []), clazz], Registry);
-      }
-    };
+      Reflect.defineMetadata(REPOSITORY, [...(Reflect.getMetadata(REPOSITORY, Registry) || []), clazz], Registry);
+
+      return undefined;
+    }
+
+    return descriptor;
   };
 
 
-export const Repository = (config: RepositoryConfig) => (classOrDescriptor: IAggregateRepositoryConstructor<any> | ClassDescriptor) =>
-  (typeof classOrDescriptor === 'function')
-    ? legacyClass(config, classOrDescriptor)
-    : standardClass(config, classOrDescriptor)
+export const Repository = (config: RepositoryConfig) =>
+  (classOrDescriptor: IAggregateRepositoryConstructor<any> | ClassDescriptor) =>
+    (typeof classOrDescriptor === 'function')
+      ? legacyClass(config, classOrDescriptor)
+      : standardClass(config, classOrDescriptor)
 ;
 
