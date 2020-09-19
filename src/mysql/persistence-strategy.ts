@@ -11,7 +11,7 @@ import {
 import { Pool } from 'mysql';
 import { createMysqlPool, promisifyQuery } from '../helper/mysql';
 import { MysqlWriteLockStrategy } from './write-lock-strategy';
-import { PersistenceStrategy, WrappedMiddleware } from '../event-store';
+import { PersistenceStrategy } from '../event-store';
 import { StreamAlreadyExists, StreamNotFound } from '../exception';
 import { EVENT_STREAMS_TABLE, PROJECTIONS_TABLE } from '../index';
 import { MysqlOptions } from "./types";
@@ -259,7 +259,7 @@ export class MysqlPersistenceStrategy implements PersistenceStrategy {
     return new MysqlIterator(this.client, { query, values }, this.eventMap);
   }
 
-  public async mergeAndLoad(streams: Array<LoadStreamParameter>, middleware: WrappedMiddleware[] = []) {
+  public async mergeAndLoad(streams: Array<LoadStreamParameter>) {
     let queries = [];
     let parameters = [];
 
