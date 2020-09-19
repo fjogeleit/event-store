@@ -1,5 +1,5 @@
 import { IEvent } from '../types';
-import { WrappedMiddleware } from '../event-store';
+import { WrappedMiddleware } from '../types';
 
 export class MiddlewareIterator {
     constructor(private readonly events: AsyncIterable<IEvent>,

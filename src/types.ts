@@ -75,6 +75,8 @@ export interface EventMetadata {
   [label: string]: any;
 }
 
+export type WrappedMiddleware = (event: IEvent) => Promise<IEvent> | IEvent;
+
 export interface IEventConstructor<T = object> {
   new (_eventName: string, _payload: T, _metadata: EventMetadata, _uuid?: string, microtime?: number, no?: number): IEvent;
 }

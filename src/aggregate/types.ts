@@ -24,6 +24,3 @@ export interface IAggregateRepository<T extends IAggregate> {
 export interface IAggregateRepositoryConstructor<T extends IAggregate> {
   new (): IAggregateRepository<T>;
 }
-
-export * from './aggregate';
-export * from './aggregate-repository';

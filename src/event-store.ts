@@ -21,8 +21,6 @@ interface MiddlewareCollection {
   [EventAction.LOADED]: EventCallback[];
 }
 
-export type WrappedMiddleware = (event: IEvent) => Promise<IEvent> | IEvent;
-
 export interface PersistenceStrategy {
   createEventStreamsTable(): Promise<void>;
   createProjectionsTable(): Promise<void>;
