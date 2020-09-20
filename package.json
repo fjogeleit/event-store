@@ -1,6 +1,6 @@
 {
   "name": "fj-event-store",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "description": "A EventStore for NodeJS inspired from the prooph/event-store v7.",
   "author": "Frank Jogeleit <frank.jogeleit@webdev-jogeleit.de>",
   "license": "MIT",
