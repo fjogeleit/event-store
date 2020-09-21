@@ -14,6 +14,7 @@ import { StreamAlreadyExists, StreamNotFound } from '../exception';
 import { EVENT_STREAMS_TABLE, PROJECTIONS_TABLE } from '../index';
 import { SqliteOptions } from "./types";
 import { SqliteIterator } from "./iterator";
+import { Registry } from '../registry';
 
 const sha1 = require('js-sha1');
 
@@ -26,6 +27,13 @@ export class SqlitePersistenceStrategy implements PersistenceStrategy {
   private readonly eventMap: { [aggregateEvent: string]: IEventConstructor };
 
   constructor(private readonly options: SqliteOptions) {
+    if (options.connectionString === null
+      || options.connectionString === undefined) {
+      throw new Error('Missing database connection string')
+    }
+    if (!(options.registry instanceof Registry)) {
+      throw new Error('Missing Registry')
+    }
     this.client = createSqlitelPool(options.connectionString);
 
     this.eventMap = this.options.registry.aggregates.reduce((eventMap, aggregate) => {
@@ -181,7 +189,7 @@ export class SqlitePersistenceStrategy implements PersistenceStrategy {
       metadata: JSON.stringify(event.metadata),
       created_at: event.createdAt.toISOString(),
     }));
-    
+
     return new Promise<void>((resolve, reject) => {
       this.client.serialize(() => {
         const stmt = this.client.prepare(`INSERT INTO ${tableName} (event_id, event_name, payload, metadata, created_at) VALUES (?, ?, ?, ?, ?);`);
