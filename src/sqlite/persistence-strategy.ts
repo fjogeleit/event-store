@@ -27,8 +27,7 @@ export class SqlitePersistenceStrategy implements PersistenceStrategy {
   private readonly eventMap: { [aggregateEvent: string]: IEventConstructor };
 
   constructor(private readonly options: SqliteOptions) {
-    if (options.connectionString === null
-      || options.connectionString === undefined) {
+    if (typeof options.connectionString !== 'string') {
       throw new Error('Missing database connection string')
     }
     if (!(options.registry instanceof Registry)) {
