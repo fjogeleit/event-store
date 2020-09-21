@@ -284,7 +284,7 @@ export class SqlitePersistenceStrategy implements PersistenceStrategy {
         }
 
         values.push(match.value);
-        where.push(`JSON_UNQUOTE(metadata->"$.${match.field}") ${expression(`?`)}`);
+        where.push(`JSON_EXTRACT(metadata, '$.${match.field}') ${expression(`?`)}`);
       }
 
       if (match.fieldType === FieldType.MESSAGE_PROPERTY) {
