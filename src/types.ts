@@ -38,6 +38,7 @@ export interface IEventStore {
   deleteStream(streamName: string): Promise<void>;
   getProjectionManager(): IProjectionManager;
   createRepository<T extends IAggregate>(streamName: string, aggregate: IAggregateConstructor<T>): IAggregateRepository<T>;
+  getRepository<T extends IAggregate>(aggregate: IAggregateConstructor<T>): IAggregateRepository<T>;
   getProjector<T extends IState = any>(name: string): IProjector<T>;
   getReadModelProjector<R extends IReadModel, T extends IState>(name: string): IReadModelProjector<R, T>;
 }
