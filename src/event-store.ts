@@ -7,10 +7,10 @@ import {
   IProjector,
   IProjectionConstructor,
   IReadModel,
-  IReadModelProjectionConstructor,
+  IReadModelProjectionConstructor
 } from './projection';
 
-import { IAggregate, IAggregateConstructor, AggregateRepository } from './aggregate';
+import { IAggregate, IAggregateConstructor, AggregateRepository, IAggregateRepository } from './aggregate';
 import { ProjectionNotFound } from './exception';
 import { MiddlewareIterator } from './middleware/iterator';
 
@@ -39,12 +39,12 @@ export interface PersistenceStrategy {
 export abstract class EventStore implements IEventStore {
   protected readonly _eventMap: AggregateEventMap;
   protected abstract readonly _persistenceStrategy: PersistenceStrategy;
+  protected readonly repositories = new Map<IAggregateConstructor, IAggregateRepository<any>>();
 
   protected _projections: { [name: string]: IProjector<any> };
   protected _readModelProjections: {
     [name: string]: IReadModelProjector<any, any>;
   };
-  public repositories = [];
 
   protected readonly middleware: MiddlewareCollection = {
     [EventAction.APPEND_ERRORED]: [],
@@ -102,7 +102,13 @@ export abstract class EventStore implements IEventStore {
   }
 
   public async createStream(streamName: string) {
-    await this._persistenceStrategy.addStreamToStreamsTable(streamName);
+    try {
+      await this._persistenceStrategy.addStreamToStreamsTable(streamName);
+    } catch(error) {
+      console.warn(error)
+
+      return;
+    }
 
     try {
       await this._persistenceStrategy.createSchema(streamName);
@@ -166,12 +172,26 @@ export abstract class EventStore implements IEventStore {
     return this._persistenceStrategy.deleteStream(streamName);
   }
 
-  public createRepository<T extends IAggregate>(streamName: string, aggregate: IAggregateConstructor<T>) {
-    return new AggregateRepository<T>({
+  public createRepository<T extends IAggregate>(streamName: string, aggregate: IAggregateConstructor<T>): IAggregateRepository<T> {
+    const repository = new AggregateRepository<T>({
       eventStore: this,
       streamName,
       aggregate,
     });
+
+    this.repositories.set(aggregate, repository);
+
+    return repository;
+  }
+
+  public getRepository<T extends IAggregate>(aggregate: IAggregateConstructor<T>): IAggregateRepository<T> {
+    const repository = this.repositories.get(aggregate);
+
+    if (!repository) {
+      throw Error('No Repository for this Aggregate was created');
+    }
+
+    return repository;
   }
 
   public abstract getProjectionManager(): IProjectionManager;
