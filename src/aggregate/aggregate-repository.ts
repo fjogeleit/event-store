@@ -16,13 +16,13 @@ export class AggregateRepository<T extends IAggregate> implements IAggregateRepo
     }
   }
 
-  public save(aggregate: T) {
+  public save(aggregate: T): Promise<void> {
     const events = aggregate.popEvents();
 
     return this.eventStore.appendTo(this.streamName, events);
   }
 
-  public async get(aggregateId: string) {
+  public async get(aggregateId: string): Promise<T> {
     const matcher: IMetadataMatcher = {
       data: [
         {
